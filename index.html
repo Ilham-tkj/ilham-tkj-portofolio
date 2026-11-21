@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Portofolio | Hamz</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Navigasi -->
+  <header>
+    <nav class="navbar">
+      <a href="#" class="logo">HAMZ<span>.DEV</span></a>
+      <button class="menu-toggle" id="menu-toggle" aria-label="Buka Menu">☰</button>
+      <ul class="nav-links" id="nav-links">
+        <li><a href="#tentang">Tentang</a></li>
+        <li><a href="#keahlian">Keahlian</a></li>
+        <li><a href="#proyek">Proyek</a></li>
+        <li><a href="#kontak">Kontak</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <!-- Hero Section -->
+  <section class="hero" id="beranda">
+    <div class="hero-content">
+      <p class="tagline">Halo, saya</p>
+      <h1>Ilham Pangestu</h1>
+      <p class="subtitle">Pelajar TJKT &bull; Antusias Hardware PC &bull; IoT &amp; Web Developer</p>
+      <div class="hero-buttons">
+        <a href="#proyek" class="btn primary">Lihat Proyek</a>
+        <a href="#kontak" class="btn secondary">Hubungi Saya</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Tentang Saya -->
+  <section class="section" id="tentang">
+    <h2 class="section-title">Tentang Saya</h2>
+    <div class="about-box">
+      <p>
+        Saya adalah pelajar Teknik Jaringan Komputer dan Telekomunikasi (TJKT) yang memiliki minat tinggi pada perakitan hardware PC, pemrograman mikrokontroler (ESP32), jaringan komputer, serta pengembangan web front-end.
+      </p>
+    </div>
+  </section>
+
+  <!-- Keahlian -->
+  <section class="section" id="keahlian">
+    <h2 class="section-title">Keahlian</h2>
+    <div class="skills-grid">
+      <div class="skill-card">
+        <h3>Perakitan &amp; Hardware PC</h3>
+        <p>Kompatibilitas komponen, manajemen kabel, dan troubleshooting sistem.</p>
+      </div>
+      <div class="skill-card">
+        <h3>Jaringan Komputer</h3>
+        <p>Konfigurasi dasar jaringan, crimping kabel, dan topologi LAN.</p>
+      </div>
+      <div class="skill-card">
+        <h3>IoT &amp; Mikrokontroler</h3>
+        <p>Perancangan sirkuit dan pemrograman dasar berbasis ESP32.</p>
+      </div>
+      <div class="skill-card">
+        <h3>Web Development</h3>
+        <p>Membangun antarmuka web responsif menggunakan HTML, CSS, dan JavaScript.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Proyek -->
+  <section class="section" id="proyek">
+    <h2 class="section-title">Proyek Pilihan</h2>
+    <div class="projects-grid">
+      <article class="project-card">
+        <span class="badge">IoT / ESP32</span>
+        <h3>Kontrol Suhu Otomatis</h3>
+        <p>Simulasi sistem pengendali suhu ruangan penetas berbasis ESP32 dengan monitoring jarak jauh.</p>
+      </article>
+      <article class="project-card">
+        <span class="badge">Hardware</span>
+        <h3>Simulasi Rakit PC Custom</h3>
+        <p>Perancangan berbagai konfigurasi PC sesuai kebutuhan (Office, Gaming, Desain) beserta estimasi daya.</p>
+      </article>
+      <article class="project-card">
+        <span class="badge">Web</span>
+        <h3>Website Portofolio Pribadi</h3>
+        <p>Website statis ringan dengan desain dark-mode responsif yang di-hosting melalui GitHub Pages.</p>
+      </article>
+    </div>
+  </section>
+
+  <!-- Kontak -->
+  <section class="section" id="kontak">
+    <h2 class="section-title">Kontak</h2>
+    <form class="contact-form" id="contact-form">
+      <input type="text" id="nama" placeholder="Nama Anda" required>
+      <input type="email" id="email" placeholder="Email Anda" required>
+      <textarea id="pesan" rows="4" placeholder="Tulis pesan Anda..." required></textarea>
+      <button type="submit" class="btn primary">Kirim Pesan</button>
+      <p id="form-status" class="form-status"></p>
+    </form>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <p>&copy; 2026 Ilham Pangestu (@hamztechlab). Dibuat dengan HTML, CSS, &amp; JS.</p>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
