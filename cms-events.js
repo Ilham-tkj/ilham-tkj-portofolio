@@ -239,6 +239,7 @@ function attachCanvaResizeHandles(el) {
     appData.elementStyles[el.id] = { ...(appData.elementStyles[el.id] || {}), opacity: val };
     applyElementStyles();
     localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
+    if (typeof pushDataToFirebase === 'function') pushDataToFirebase();
   });
 
   popover.addEventListener('click', (e) => {
@@ -378,6 +379,7 @@ function attachCanvaResizeHandles(el) {
         h.removeEventListener('pointermove', onMove);
         h.removeEventListener('pointerup', onUp);
         localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
+        if (typeof pushDataToFirebase === 'function') pushDataToFirebase();
       };
 
       h.addEventListener('pointermove', onMove);
@@ -390,7 +392,6 @@ function attachCanvaResizeHandles(el) {
   el.appendChild(overlay);
 }
 
-// Drag & Drop Geser Posisi + Smart Guides Snapping + Tukar Urutan Kartu
 let activeDragEl = null;
 let dragStartX = 0;
 let dragStartY = 0;
@@ -481,6 +482,7 @@ document.addEventListener('pointerup', () => {
       }
     } else {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
+      if (typeof pushDataToFirebase === 'function') pushDataToFirebase();
     }
   }
 
@@ -500,7 +502,7 @@ function selectElementForInspector(el) {
 }
 
 // =========================================================
-// KONTROL SLIDE BAR BAWAH, AUTO-PADDING & TAMBAH PANJANG HALAMAN
+// KONTROL SLIDE BAR BAWAH, PANJANG & HAPUS HALAMAN
 // =========================================================
 function updateBottomSafePadding() {
   const bar = document.getElementById('editor-panel');
@@ -560,6 +562,7 @@ function changeActivePageLength(delta) {
   appData.pageHeights[currentPageId] = nextH;
   applyPageHeights();
   localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
+  if (typeof pushDataToFirebase === 'function') pushDataToFirebase();
 }
 
 document.getElementById('extend-page-btn')?.addEventListener('click', () => changeActivePageLength(250));
@@ -569,6 +572,24 @@ document.getElementById('reset-page-height-btn')?.addEventListener('click', () =
   if (appData.pageHeights) delete appData.pageHeights[currentPageId];
   applyPageHeights();
   localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
+  if (typeof pushDataToFirebase === 'function') pushDataToFirebase();
+});
+
+// FITUR HAPUS HALAMAN AKTIF
+document.getElementById('delete-current-page-btn')?.addEventListener('click', () => {
+  if (appData.pages.length <= 1) {
+    return alert('Minimal harus tersisa 1 halaman di website.');
+  }
+  const activePage = appData.pages.find(p => p.id === currentPageId);
+  if (!activePage) return;
+  if (!confirm(`Hapus halaman "${activePage.title}" secara permanen?`)) return;
+
+  recordSnapshot();
+  appData.pages = appData.pages.filter(p => p.id !== currentPageId);
+  appData.dynamicSubs = appData.dynamicSubs.filter(s => s.pageId !== currentPageId);
+  document.getElementById('page-' + currentPageId)?.remove();
+  currentPageId = appData.pages[0].id;
+  persistAndRender();
 });
 
 window.addEventListener('resize', updateBottomSafePadding);
@@ -736,6 +757,7 @@ document.addEventListener('input', (e) => {
   if (el && el.dataset.key) {
     appData.texts[el.dataset.key] = el.innerHTML;
     localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
+    if (typeof pushDataToFirebase === 'function') pushDataToFirebase();
   }
 });
 
@@ -751,7 +773,7 @@ document.getElementById('topbar-add-link-btn')?.addEventListener('click', () => 
   persistAndRender();
 });
 
-// Modal Bingkai Foto (Simpan & Hapus Bingkai)
+// Modal Bingkai Foto
 document.getElementById('pf-size-range')?.addEventListener('input', (e) => {
   document.getElementById('pf-size-lbl').textContent = e.target.value + 'px';
 });
@@ -860,6 +882,7 @@ document.getElementById('apply-selection-color-btn')?.addEventListener('click', 
   if (editableParent.dataset.key) {
     appData.texts[editableParent.dataset.key] = editableParent.innerHTML;
     localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
+    if (typeof pushDataToFirebase === 'function') pushDataToFirebase();
   }
 });
 
@@ -985,6 +1008,7 @@ document.querySelectorAll('.preset-btn').forEach(btn => {
     if (id === 'pick-text') appData.theme.text = val;
     applyTheme();
     localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
+    if (typeof pushDataToFirebase === 'function') pushDataToFirebase();
   });
 });
 
@@ -994,14 +1018,16 @@ document.getElementById('bg-opacity-range')?.addEventListener('input', (e) => {
   document.getElementById('bg-op-lbl').textContent = val + '%';
   applyTheme();
   localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
+  if (typeof pushDataToFirebase === 'function') pushDataToFirebase();
 });
 
 document.getElementById('bg-blur-range')?.addEventListener('input', (e) => {
   const val = Number(e.target.value);
   appData.theme.bgBlur = val;
-document.getElementById('bg-blur-lbl').textContent = val + 'px';
+  document.getElementById('bg-blur-lbl').textContent = val + 'px';
   applyTheme();
   localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
+  if (typeof pushDataToFirebase === 'function') pushDataToFirebase();
 });
 
 document.getElementById('font-style-select')?.addEventListener('change', (e) => {
@@ -1017,6 +1043,7 @@ document.getElementById('card-radius-range')?.addEventListener('input', (e) => {
   if (lbl) lbl.textContent = val + 'px';
   applyTheme();
   localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
+  if (typeof pushDataToFirebase === 'function') pushDataToFirebase();
 });
 
 document.getElementById('toggle-grid-bg')?.addEventListener('change', (e) => {
@@ -1125,6 +1152,95 @@ contactForm?.addEventListener('submit', (e) => {
   setTimeout(() => { if (formStatus) formStatus.textContent = ''; }, 4000);
 });
 
+// =========================================================
+// REAL-TIME CLOUD SYNC (FIREBASE REALTIME DATABASE)
+// =========================================================
+const FIREBASE_URL_KEY = 'hamz_firebase_db_url';
+// Tempel URL Firebase Realtime Database kamu di dalam tanda kutip di bawah ini
+// agar semua perangkat otomatis terhubung tanpa input ulang:
+const DEFAULT_FIREBASE_URL = '';
+
+function getFirebaseBaseUrl() {
+  const saved = localStorage.getItem(FIREBASE_URL_KEY) || DEFAULT_FIREBASE_URL;
+  return saved.trim().replace(/\/+$/, '');
+}
+
+function setCloudStatusText(msg, isError = false) {
+  const el = document.getElementById('cloud-sync-status');
+  if (!el) return;
+  el.textContent = msg;
+  el.style.color = isError ? '#ef4444' : '#00e5ff';
+}
+
+let cloudSyncTimer = null;
+function pushDataToFirebase() {
+  const baseUrl = getFirebaseBaseUrl();
+  if (!baseUrl) return;
+
+  setCloudStatusText('☁️ Menyimpan ke Cloud...');
+  clearTimeout(cloudSyncTimer);
+  cloudSyncTimer = setTimeout(async () => {
+    try {
+      const res = await fetch(`${baseUrl}/portfolioData.json`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(appData)
+      });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const now = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      setCloudStatusText(`✅ Tersinkron Real-Time (${now})`);
+    } catch (err) {
+      setCloudStatusText('⚠️ Gagal sync ke Firebase. Cek URL / Rules.', true);
+    }
+  }, 600);
+}
+
+async function pullDataFromFirebase(showAlert = false) {
+  const baseUrl = getFirebaseBaseUrl();
+  if (!baseUrl) return;
+
+  try {
+    const res = await fetch(`${baseUrl}/portfolioData.json?t=${Date.now()}`);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const cloudData = await res.json();
+    if (cloudData && typeof cloudData === 'object' && cloudData.pages) {
+      appData = {
+        ...appData,
+        ...cloudData,
+        adminCreds: { ...appData.adminCreds, ...(cloudData.adminCreds || {}) },
+        theme: { ...appData.theme, ...(cloudData.theme || {}) }
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
+      renderAllUI();
+      updateBottomSafePadding();
+      setCloudStatusText('✅ Data terbaru dimuat dari Cloud');
+      if (showAlert) alert('Berhasil menarik data terbaru dari Firebase!');
+    } else if (showAlert) {
+      alert('Database Firebase masih kosong. Tekan "Hubungkan & Sync" untuk mengunggah data saat ini.');
+    }
+  } catch (err) {
+    setCloudStatusText('⚠️ Gagal memuat data Cloud.', true);
+    if (showAlert) alert('Gagal terhubung ke Firebase. Pastikan URL benar dan Rules mengizinkan baca/tulis.');
+  }
+}
+
+const fbInput = document.getElementById('firebase-db-url');
+if (fbInput) fbInput.value = getFirebaseBaseUrl();
+
+document.getElementById('save-firebase-url-btn')?.addEventListener('click', () => {
+  const val = fbInput?.value.trim().replace(/\/+$/, '') || '';
+  if (!val.startsWith('https://')) {
+    return alert('Masukkan URL Firebase Realtime Database yang valid (diawali https://...)');
+  }
+  localStorage.setItem(FIREBASE_URL_KEY, val);
+  pushDataToFirebase();
+  alert('Terhubung! Jangan lupa salin URL ini ke variabel DEFAULT_FIREBASE_URL di cms-events.js agar pengunjung di perangkat lain otomatis terhubung.');
+});
+
+document.getElementById('pull-firebase-btn')?.addEventListener('click', () => {
+  pullDataFromFirebase(true);
+});
+
 // Inisialisasi Awal
 const savedRaw = localStorage.getItem(STORAGE_KEY);
 if (savedRaw) {
@@ -1140,3 +1256,7 @@ if (savedRaw) {
 }
 renderAllUI();
 updateBottomSafePadding();
+
+if (getFirebaseBaseUrl()) {
+  pullDataFromFirebase(false);
+}

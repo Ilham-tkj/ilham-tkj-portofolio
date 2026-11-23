@@ -3,6 +3,9 @@
 function persistAndRender() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
   renderAllUI();
+  if (typeof pushDataToFirebase === 'function') {
+    pushDataToFirebase();
+  }
 }
 
 function renderAllUI() {
@@ -72,6 +75,7 @@ function renderNavigation() {
     btn.addEventListener('input', () => {
       page.title = btn.textContent?.trim() || page.title;
       localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
+      if (typeof pushDataToFirebase === 'function') pushDataToFirebase();
     });
 
     btn.addEventListener('click', (e) => {
@@ -82,7 +86,7 @@ function renderNavigation() {
 
     row.appendChild(btn);
 
-    if (page.custom) {
+    if (appData.pages.length > 1) {
       const delPageBtn = document.createElement('button');
       delPageBtn.type = 'button';
       delPageBtn.className = 'delete-page-nav-btn';
@@ -90,10 +94,12 @@ function renderNavigation() {
       delPageBtn.title = 'Hapus Halaman';
       delPageBtn.addEventListener('click', (e) => {
         e.stopPropagation();
+        if (!confirm(`Hapus halaman "${page.title}"?`)) return;
         recordSnapshot();
         appData.pages = appData.pages.filter(p => p.id !== page.id);
+        appData.dynamicSubs = appData.dynamicSubs.filter(s => s.pageId !== page.id);
         document.getElementById('page-' + page.id)?.remove();
-        if (currentPageId === page.id) currentPageId = 'beranda';
+        if (currentPageId === page.id) currentPageId = appData.pages[0].id;
         persistAndRender();
       });
       row.appendChild(delPageBtn);
@@ -103,7 +109,6 @@ function renderNavigation() {
     navList.appendChild(li);
   });
 
-  // Render Link Menu Custom di Top Bar
   (appData.topbarLinks || []).forEach(link => {
     const li = document.createElement('li');
     li.className = 'nav-group';
@@ -135,7 +140,6 @@ function renderNavigation() {
     navList.appendChild(li);
   });
 
-  // Render Tombol Login Icon / Avatar di Pojok Kanan Top Bar (Hanya saat belum login)
   if (!isAdminLoggedIn) {
     const loginLi = document.createElement('li');
     loginLi.className = 'nav-admin-login-item';
@@ -195,7 +199,7 @@ function renderSubNavPills() {
 
 function switchPage(pageId, scrollToTop = true) {
   const exists = appData.pages.some(p => p.id === pageId);
-  currentPageId = exists ? pageId : 'beranda';
+  currentPageId = exists ? pageId : (appData.pages[0]?.id || 'beranda');
 
   document.querySelectorAll('.page-view').forEach(sec => {
     sec.classList.toggle('active', sec.dataset.pageId === currentPageId);
@@ -426,7 +430,6 @@ function renderPhotoFrames() {
       ${f.caption ? `<span class="pf-cap">${f.caption}</span>` : ''}
     `;
 
-    // Jika dipasang di Hero, taruh di atas .hero-content agar rapi & tidak menabrak teks
     const heroContent = host.querySelector('.hero-content');
     if (heroContent) {
       heroContent.prepend(wrap);
