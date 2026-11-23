@@ -64,39 +64,524 @@ document.getElementById('mc-kind')?.addEventListener('change', (e) => {
   }
 });
 
-function hideElementInspector() {
-  document.getElementById('element-inspector')?.classList.add('hidden');
-  document.querySelectorAll('.inspected-selected').forEach(x => x.classList.remove('inspected-selected'));
+// =========================================================
+// RESPONSIVE CANVAS SCALING & SMART GUIDES SNAPPING
+// =========================================================
+window.addEventListener('resize', () => {
+  applyElementStyles();
+  if (isSelectorMode && selectedTargetId) {
+    const el = document.getElementById(selectedTargetId);
+    if (el) attachCanvaResizeHandles(el);
+  }
+});
+
+function hideSmartGuides() {
+  const gv = document.getElementById('smart-guide-v');
+  const gh = document.getElementById('smart-guide-h');
+  if (gv) gv.style.display = 'none';
+  if (gh) gh.style.display = 'none';
 }
 
+function computeSnapAdjustment(el, proposedLeftPx, proposedTopPx) {
+  const SNAP_DIST = 9;
+  const gv = document.getElementById('smart-guide-v');
+  const gh = document.getElementById('smart-guide-h');
+  const rect = el.getBoundingClientRect();
+  const curLeft = parseFloat(el.style.left || '0') || 0;
+  const curTop = parseFloat(el.style.top || '0') || 0;
+
+  const predLeft = rect.left + (proposedLeftPx - curLeft);
+  const predRight = predLeft + rect.width;
+  const predCenterX = predLeft + rect.width / 2;
+
+  const predTop = rect.top + (proposedTopPx - curTop);
+  const predBottom = predTop + rect.height;
+  const predCenterY = predTop + rect.height / 2;
+
+  const host = el.closest('.page-view') || document.querySelector('main');
+  const hostRect = host ? host.getBoundingClientRect() : { left: 0, width: window.innerWidth };
+  const canvasCenterX = hostRect.left + hostRect.width / 2;
+
+  const vTargets = [canvasCenterX, hostRect.left + 16, hostRect.left + hostRect.width - 16];
+  const hTargets = [];
+
+  document.querySelectorAll('.page-view.active .photo-frame-widget, .page-view.active .glass-card, .page-view.active .text-plain-box, .page-view.active .float-card').forEach(other => {
+    if (other === el || other.contains(el) || el.contains(other)) return;
+    const r = other.getBoundingClientRect();
+    if (r.width === 0 || r.height === 0) return;
+    vTargets.push(r.left, r.left + r.width / 2, r.right);
+    hTargets.push(r.top, r.top + r.height / 2, r.bottom);
+  });
+
+  let snapDx = 0;
+  let guideX = null;
+  let bestDistX = SNAP_DIST + 1;
+
+  vTargets.forEach(tx => {
+    [predLeft, predCenterX, predRight].forEach(px => {
+      const diff = tx - px;
+      if (Math.abs(diff) < bestDistX) {
+        bestDistX = Math.abs(diff);
+        snapDx = diff;
+        guideX = tx;
+      }
+    });
+  });
+
+  let snapDy = 0;
+  let guideY = null;
+  let bestDistY = SNAP_DIST + 1;
+
+  hTargets.forEach(ty => {
+    [predTop, predCenterY, predBottom].forEach(py => {
+      const diff = ty - py;
+      if (Math.abs(diff) < bestDistY) {
+        bestDistY = Math.abs(diff);
+        snapDy = diff;
+        guideY = ty;
+      }
+    });
+  });
+
+  if (gv) {
+    if (guideX !== null) {
+      gv.style.left = Math.round(guideX) + 'px';
+      gv.style.display = 'block';
+    } else {
+      gv.style.display = 'none';
+    }
+  }
+
+  if (gh) {
+    if (guideY !== null) {
+      gh.style.top = Math.round(guideY) + 'px';
+      gh.style.display = 'block';
+    } else {
+      gh.style.display = 'none';
+    }
+  }
+
+  return {
+    left: Math.round(proposedLeftPx + snapDx),
+    top: Math.round(proposedTopPx + snapDy)
+  };
+}
+
+// =========================================================
+// MODE SELECTOR, MENU TITIK TIGA (⋮), RESIZE & DRAG-AND-DROP
+// =========================================================
+function getFrameHostId(elId) {
+  return elId.startsWith('pf-widget-') ? elId.replace('pf-widget-', '') : elId;
+}
+
+function toggleSelectorMode(forceState) {
+  if (!isEditorActive) return;
+  isSelectorMode = typeof forceState === 'boolean' ? forceState : !isSelectorMode;
+  if (!isSelectorMode) clearElementSelection();
+  syncEditorModeAttributes();
+  updateBottomSafePadding();
+}
+
+document.getElementById('toggle-selector-btn')?.addEventListener('click', () => toggleSelectorMode());
+document.getElementById('exit-selector-banner-btn')?.addEventListener('click', () => toggleSelectorMode(false));
+
+function removeCanvaOverlay() {
+  document.querySelectorAll('.canva-resize-overlay').forEach(el => el.remove());
+  hideSmartGuides();
+}
+
+function clearElementSelection() {
+  selectedTargetId = '';
+  document.querySelectorAll('.inspected-selected').forEach(x => x.classList.remove('inspected-selected'));
+  removeCanvaOverlay();
+}
+
+function attachCanvaResizeHandles(el) {
+  removeCanvaOverlay();
+  if (!el || !isSelectorMode) return;
+
+  if (getComputedStyle(el).position === 'static') {
+    el.style.position = 'relative';
+  }
+
+  const overlay = document.createElement('div');
+  overlay.className = 'canva-resize-overlay';
+
+  const moreBtn = document.createElement('button');
+  moreBtn.type = 'button';
+  moreBtn.className = 'canva-more-btn';
+  moreBtn.title = 'Opsi Elemen';
+  moreBtn.textContent = '⋮';
+
+  const popover = document.createElement('div');
+  popover.className = 'canva-more-popover hidden';
+
+  const st = appData.elementStyles[el.id] || {};
+  const curOpacity = st.opacity ?? 100;
+  const isPhotoWidget = el.classList.contains('photo-frame-widget');
+
+  popover.innerHTML = `
+    <label>👻 Transparansi (<span class="pop-op-lbl">${curOpacity}%</span>)
+      <input type="range" class="pop-op-range" min="15" max="100" value="${curOpacity}">
+    </label>
+    ${!isPhotoWidget ? '<button type="button" class="canva-pop-btn" data-pop-act="overlay">🪟 Toggle Overlay Kartu</button>' : ''}
+    <button type="button" class="canva-pop-btn" data-pop-act="frame">🖼️ ${isPhotoWidget ? 'Edit / Ganti Bingkai Foto' : 'Tambah / Edit Bingkai Foto'}</button>
+    <button type="button" class="canva-pop-btn" data-pop-act="reset-pos">📍 Reset Posisi Geser</button>
+    <button type="button" class="canva-pop-btn" data-pop-act="reset-all">🔄 Reset Ukuran &amp; Posisi</button>
+  `;
+
+  popover.addEventListener('pointerdown', (e) => e.stopPropagation());
+  popover.addEventListener('click', (e) => e.stopPropagation());
+
+  popover.querySelector('.pop-op-range')?.addEventListener('input', (e) => {
+    const val = Number(e.target.value);
+    popover.querySelector('.pop-op-lbl').textContent = val + '%';
+    appData.elementStyles[el.id] = { ...(appData.elementStyles[el.id] || {}), opacity: val };
+    applyElementStyles();
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
+  });
+
+  popover.addEventListener('click', (e) => {
+    const actBtn = e.target.closest('[data-pop-act]');
+    if (!actBtn) return;
+    const act = actBtn.dataset.popAct;
+
+    if (act === 'overlay') {
+      recordSnapshot();
+      const currentlyHasOverlay = el.classList.contains('glass-card');
+      appData.elementStyles[el.id] = { ...(appData.elementStyles[el.id] || {}), noOverlay: currentlyHasOverlay };
+      persistAndRender();
+      selectElementForInspector(document.getElementById(el.id));
+    } else if (act === 'frame') {
+      const hostId = getFrameHostId(el.id);
+      const existing = appData.photoFrames?.[hostId];
+      document.getElementById('pf-shape').value = existing?.shape || 'circle';
+      document.getElementById('pf-img-url').value = existing?.url || '';
+      document.getElementById('pf-img-file').value = '';
+      document.getElementById('pf-size-range').value = existing?.size || 170;
+      document.getElementById('pf-size-lbl').textContent = (existing?.size || 170) + 'px';
+      document.getElementById('pf-caption').value = existing?.caption || '';
+      document.getElementById('photo-frame-modal')?.classList.remove('hidden');
+    } else if (act === 'reset-pos') {
+      recordSnapshot();
+      if (appData.elementStyles[el.id]) {
+        delete appData.elementStyles[el.id].tx;
+        delete appData.elementStyles[el.id].ty;
+        delete appData.elementStyles[el.id].txNorm;
+        delete appData.elementStyles[el.id].tyNorm;
+      }
+      persistAndRender();
+      selectElementForInspector(document.getElementById(el.id));
+    } else if (act === 'reset-all') {
+      recordSnapshot();
+      delete appData.elementStyles[el.id];
+      persistAndRender();
+      selectElementForInspector(document.getElementById(el.id));
+    }
+  });
+
+  moreBtn.addEventListener('pointerdown', (e) => e.stopPropagation());
+  moreBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    popover.classList.toggle('hidden');
+  });
+
+  overlay.append(moreBtn, popover);
+
+  const sizePill = document.createElement('div');
+  sizePill.className = 'canva-size-pill';
+  const initRect = el.getBoundingClientRect();
+  sizePill.textContent = Math.round(initRect.width) + ' × ' + Math.round(initRect.height) + 'px';
+  overlay.appendChild(sizePill);
+
+  const dirs = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'];
+  dirs.forEach(dir => {
+    const h = document.createElement('span');
+    h.className = 'canva-handle ' + dir;
+
+    h.addEventListener('pointerdown', (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+      popover.classList.add('hidden');
+      recordSnapshot();
+
+      const startX = e.clientX;
+      const startY = e.clientY;
+      const rect = el.getBoundingClientRect();
+      const startW = rect.width;
+      const startH = rect.height;
+      const pW = el.parentElement ? el.parentElement.clientWidth : window.innerWidth;
+      const scale = getCanvasScaleFactor(el);
+      const startLeft = parseFloat(el.style.left || '0') || 0;
+      const startTop = parseFloat(el.style.top || '0') || 0;
+
+      h.setPointerCapture(e.pointerId);
+
+      const onMove = (ev) => {
+        const dx = ev.clientX - startX;
+        const dy = ev.clientY - startY;
+        let newW = startW;
+        let newH = startH;
+        let newLeft = startLeft;
+        let newTop = startTop;
+
+        if (dir.includes('e')) newW = Math.max(80, Math.min(pW, startW + dx));
+        if (dir.includes('w')) {
+          newW = Math.max(80, Math.min(pW, startW - dx));
+          newLeft = startLeft + (startW - newW) / 2;
+        }
+        if (dir.includes('s')) newH = Math.max(48, startH + dy);
+        if (dir.includes('n')) {
+          newH = Math.max(48, startH - dy);
+          newTop = startTop + (startH - newH);
+        }
+
+        if (isPhotoWidget) {
+          const sq = Math.max(80, Math.min(360, Math.round(Math.max(newW, newH))));
+          const pfInner = el.querySelector('.pf-inner');
+          if (pfInner) {
+            pfInner.style.width = sq + 'px';
+            pfInner.style.height = sq + 'px';
+          }
+          const hostId = getFrameHostId(el.id);
+          if (appData.photoFrames?.[hostId]) {
+            appData.photoFrames[hostId].size = sq;
+          }
+          sizePill.textContent = sq + ' × ' + sq + 'px';
+        } else {
+          const widthPct = Math.max(25, Math.min(100, Math.round((newW / Math.max(1, pW)) * 100)));
+          const heightNormPx = Math.round(newH / scale);
+
+          el.style.width = widthPct + '%';
+          el.style.maxWidth = '100%';
+          el.style.marginInline = 'auto';
+          el.style.minHeight = Math.round(newH) + 'px';
+
+          sizePill.textContent = widthPct + '% × ' + Math.round(newH) + 'px';
+          appData.elementStyles[el.id] = {
+            ...(appData.elementStyles[el.id] || {}),
+            widthPct,
+            heightNormPx
+          };
+        }
+
+        el.style.left = Math.round(newLeft) + 'px';
+        el.style.top = Math.round(newTop) + 'px';
+        appData.elementStyles[el.id] = {
+          ...(appData.elementStyles[el.id] || {}),
+          txNorm: Math.round(newLeft / scale),
+          tyNorm: Math.round(newTop / scale)
+        };
+      };
+
+      const onUp = () => {
+        h.removeEventListener('pointermove', onMove);
+        h.removeEventListener('pointerup', onUp);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
+      };
+
+      h.addEventListener('pointermove', onMove);
+      h.addEventListener('pointerup', onUp);
+    });
+
+    overlay.appendChild(h);
+  });
+
+  el.appendChild(overlay);
+}
+
+// Drag & Drop Geser Posisi + Smart Guides Snapping + Tukar Urutan Kartu
+let activeDragEl = null;
+let dragStartX = 0;
+let dragStartY = 0;
+let dragOrigLeft = 0;
+let dragOrigTop = 0;
+let dragMoved = false;
+let swapTargetCard = null;
+
+document.addEventListener('pointerdown', (e) => {
+  if (!isEditorActive || !isSelectorMode) return;
+  if (e.target.closest('.canva-handle, .canva-more-btn, .canva-more-popover, #editor-panel, #editor-dock, #selector-mode-banner, #media-card-modal, #photo-frame-modal, #admin-login-modal, button, a, input, select, textarea')) return;
+
+  const targetBox = e.target.closest('.photo-frame-widget, .glass-card, .text-plain-box, .float-card, .hero, .sub-block');
+  if (!targetBox || !targetBox.id) return;
+
+  selectElementForInspector(targetBox);
+
+  activeDragEl = targetBox;
+  dragStartX = e.clientX;
+  dragStartY = e.clientY;
+  dragOrigLeft = parseFloat(targetBox.style.left || '0') || 0;
+  dragOrigTop = parseFloat(targetBox.style.top || '0') || 0;
+  dragMoved = false;
+  swapTargetCard = null;
+});
+
+document.addEventListener('pointermove', (e) => {
+  if (!activeDragEl || !isSelectorMode) return;
+  const dx = e.clientX - dragStartX;
+  const dy = e.clientY - dragStartY;
+
+  if (!dragMoved && Math.hypot(dx, dy) < 6) return;
+  if (!dragMoved) {
+    dragMoved = true;
+    recordSnapshot();
+    activeDragEl.classList.add('is-dragging-el');
+  }
+
+  e.preventDefault();
+  const rawLeft = dragOrigLeft + dx;
+  const rawTop = dragOrigTop + dy;
+  const snapped = computeSnapAdjustment(activeDragEl, rawLeft, rawTop);
+  const scale = getCanvasScaleFactor(activeDragEl);
+
+  activeDragEl.style.position = 'relative';
+  activeDragEl.style.left = snapped.left + 'px';
+  activeDragEl.style.top = snapped.top + 'px';
+
+  appData.elementStyles[activeDragEl.id] = {
+    ...(appData.elementStyles[activeDragEl.id] || {}),
+    txNorm: Math.round(snapped.left / scale),
+    tyNorm: Math.round(snapped.top / scale)
+  };
+
+  if (activeDragEl.classList.contains('media-card')) {
+    document.querySelectorAll('.drag-swap-target').forEach(x => x.classList.remove('drag-swap-target'));
+    swapTargetCard = null;
+    document.querySelectorAll('.media-card').forEach(card => {
+      if (card === activeDragEl) return;
+      const r = card.getBoundingClientRect();
+      if (e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom) {
+        swapTargetCard = card;
+        card.classList.add('drag-swap-target');
+      }
+    });
+  }
+}, { passive: false });
+
+document.addEventListener('pointerup', () => {
+  if (!activeDragEl) return;
+  activeDragEl.classList.remove('is-dragging-el');
+  document.querySelectorAll('.drag-swap-target').forEach(x => x.classList.remove('drag-swap-target'));
+  hideSmartGuides();
+
+  if (dragMoved) {
+    if (swapTargetCard && activeDragEl.classList.contains('media-card')) {
+      const idxA = appData.mediaCards.findIndex(c => c.id === activeDragEl.id);
+      const idxB = appData.mediaCards.findIndex(c => c.id === swapTargetCard.id);
+      if (idxA !== -1 && idxB !== -1) {
+        const temp = appData.mediaCards[idxA];
+        appData.mediaCards[idxA] = appData.mediaCards[idxB];
+        appData.mediaCards[idxB] = temp;
+        if (appData.elementStyles[activeDragEl.id]) {
+          delete appData.elementStyles[activeDragEl.id].txNorm;
+          delete appData.elementStyles[activeDragEl.id].tyNorm;
+        }
+        persistAndRender();
+      }
+    } else {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
+    }
+  }
+
+  activeDragEl = null;
+  swapTargetCard = null;
+  dragMoved = false;
+});
+
 function selectElementForInspector(el) {
-  if (!el || !el.id) return;
+  if (!el || !el.id || !isSelectorMode) return;
+  if (selectedTargetId === el.id && el.querySelector('.canva-resize-overlay')) return;
   selectedTargetId = el.id;
 
   document.querySelectorAll('.inspected-selected').forEach(x => x.classList.remove('inspected-selected'));
   el.classList.add('inspected-selected');
-
-  const st = appData.elementStyles[selectedTargetId] || { width: 100, opacity: 100 };
-  const wRange = document.getElementById('insp-width-range');
-  const oRange = document.getElementById('insp-opacity-range');
-  const wLbl = document.getElementById('insp-width-lbl');
-  const oLbl = document.getElementById('insp-opacity-lbl');
-
-  if (wRange) wRange.value = st.width ?? 100;
-  if (oRange) oRange.value = st.opacity ?? 100;
-  if (wLbl) wLbl.textContent = (st.width ?? 100) + '%';
-  if (oLbl) oLbl.textContent = (st.opacity ?? 100) + '%';
-
-  document.getElementById('element-inspector')?.classList.remove('hidden');
+  attachCanvaResizeHandles(el);
 }
+
+// =========================================================
+// KONTROL SLIDE BAR BAWAH, AUTO-PADDING & TAMBAH PANJANG HALAMAN
+// =========================================================
+function updateBottomSafePadding() {
+  const bar = document.getElementById('editor-panel');
+  const drawer = document.getElementById('canva-slide-drawer');
+  if (!isEditorActive || !bar || bar.classList.contains('hidden')) {
+    document.body.style.paddingBottom = '';
+    document.body.classList.remove('drawer-open');
+    return;
+  }
+  const isDrawerOpen = drawer && !drawer.classList.contains('hidden');
+  document.body.classList.toggle('drawer-open', isDrawerOpen);
+  requestAnimationFrame(() => {
+    const barH = bar.offsetHeight || 76;
+    document.body.style.paddingBottom = (barH + 28) + 'px';
+  });
+}
+
+document.querySelectorAll('.canva-tool-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    const targetId = tab.dataset.tab;
+    const label = tab.dataset.label || 'Editor';
+    const drawer = document.getElementById('canva-slide-drawer');
+    const titleEl = document.getElementById('drawer-active-title');
+    const wasActive = tab.classList.contains('active') && drawer && !drawer.classList.contains('hidden');
+
+    document.querySelectorAll('.canva-tool-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.ed-tab-content').forEach(c => c.classList.remove('active'));
+
+    if (wasActive) {
+      drawer?.classList.add('hidden');
+    } else {
+      tab.classList.add('active');
+      if (targetId) document.getElementById(targetId)?.classList.add('active');
+      if (titleEl) titleEl.textContent = label;
+      drawer?.classList.remove('hidden');
+    }
+    updateBottomSafePadding();
+  });
+});
+
+document.getElementById('close-editor-btn')?.addEventListener('click', () => {
+  document.getElementById('canva-slide-drawer')?.classList.add('hidden');
+  document.querySelectorAll('.canva-tool-tab').forEach(t => t.classList.remove('active'));
+  updateBottomSafePadding();
+});
+
+document.getElementById('drawer-selector-btn')?.addEventListener('click', () => toggleSelectorMode());
+document.getElementById('drawer-add-card-btn')?.addEventListener('click', () => openMediaCardModal(null));
+
+function changeActivePageLength(delta) {
+  const activeSec = document.getElementById('page-' + currentPageId);
+  if (!activeSec) return;
+  recordSnapshot();
+  appData.pageHeights = appData.pageHeights || {};
+  const currentMin = appData.pageHeights[currentPageId] || Math.round(activeSec.getBoundingClientRect().height);
+  const nextH = Math.max(420, currentMin + delta);
+  appData.pageHeights[currentPageId] = nextH;
+  applyPageHeights();
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
+}
+
+document.getElementById('extend-page-btn')?.addEventListener('click', () => changeActivePageLength(250));
+document.getElementById('shrink-page-btn')?.addEventListener('click', () => changeActivePageLength(-250));
+document.getElementById('reset-page-height-btn')?.addEventListener('click', () => {
+  recordSnapshot();
+  if (appData.pageHeights) delete appData.pageHeights[currentPageId];
+  applyPageHeights();
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
+});
+
+window.addEventListener('resize', updateBottomSafePadding);
 
 // LOGIN, AVATAR & LOGOUT ADMIN
 function performAdminLogout() {
   isAdminLoggedIn = false;
   isEditorActive = false;
+  isSelectorMode = false;
   clearAdminSession();
   renderNavigation();
   syncEditorModeAttributes();
+  updateBottomSafePadding();
 }
 
 document.getElementById('close-admin-login')?.addEventListener('click', () => {
@@ -116,11 +601,12 @@ document.getElementById('submit-admin-login-btn')?.addEventListener('click', () 
   if (u === validU && p === validP) {
     isAdminLoggedIn = true;
     isEditorActive = true;
+    isSelectorMode = false;
     saveAdminSession();
     document.getElementById('admin-login-modal')?.classList.add('hidden');
-    document.getElementById('editor-panel')?.classList.remove('hidden');
     renderNavigation();
     syncEditorModeAttributes();
+    updateBottomSafePadding();
   } else {
     document.getElementById('admin-login-error').textContent = 'Username atau password salah!';
   }
@@ -199,10 +685,17 @@ window.addEventListener('scroll', () => {
   }
 });
 
-// Klik Global: Navigasi, Hapus Blok & Pilih Komponen
+// Klik Global: Navigasi, Panjang Halaman, Hapus Blok & Tutup Seleksi
 document.addEventListener('click', (e) => {
   if (!e.target.closest('.nav-group')) {
     document.querySelectorAll('.nav-group.open').forEach(g => g.classList.remove('open'));
+  }
+
+  const lenBtn = e.target.closest('[data-page-len-act]');
+  if (lenBtn && isEditorActive) {
+    const act = lenBtn.dataset.pageLenAct;
+    changeActivePageLength(act === 'extend' ? 250 : -250);
+    return;
   }
 
   const pageTrigger = e.target.closest('[data-page-link]');
@@ -226,39 +719,26 @@ document.addEventListener('click', (e) => {
     return;
   }
 
-  if (isEditorActive && e.target.closest('.editable, .nav-page-btn')) {
-    hideElementInspector();
-    return;
-  }
-
-  if (isEditorActive && !e.target.closest('#editor-panel, #editor-dock, #element-inspector, #media-card-modal, #photo-frame-modal, #admin-login-modal, button, a, input, select, textarea')) {
-    const targetBox = e.target.closest('.glass-card, .text-plain-box, .hero, .sub-block, #main-topbar');
-    if (targetBox && targetBox.id) {
-      selectElementForInspector(targetBox);
-    }
+  if (isEditorActive && isSelectorMode && !e.target.closest('.photo-frame-widget, .glass-card, .text-plain-box, .float-card, .hero, .sub-block, .canva-more-btn, .canva-more-popover, #editor-panel, #editor-dock, #selector-mode-banner, #photo-frame-modal')) {
+    clearElementSelection();
   }
 });
 
 document.addEventListener('focusin', (e) => {
-  if (isEditorActive && e.target.closest('.editable, .nav-page-btn')) {
-    hideElementInspector();
+  if (isEditorActive && !isSelectorMode && e.target.closest('.editable, .nav-page-btn')) {
     recordSnapshot();
   }
 });
 
 document.addEventListener('input', (e) => {
-  if (!isEditorActive) return;
+  if (!isEditorActive || isSelectorMode) return;
   const el = e.target.closest('.editable');
-  if (el) {
-    hideElementInspector();
-    if (el.dataset.key) {
-      appData.texts[el.dataset.key] = el.innerHTML;
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
-    }
+  if (el && el.dataset.key) {
+    appData.texts[el.dataset.key] = el.innerHTML;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
   }
 });
 
-// Tambah Link Menu Baru di Top Bar
 document.getElementById('topbar-add-link-btn')?.addEventListener('click', () => {
   const label = prompt('Nama tombol menu baru di Top Bar (misal: YouTube / GitHub):');
   if (!label || !label.trim()) return;
@@ -271,64 +751,7 @@ document.getElementById('topbar-add-link-btn')?.addEventListener('click', () => 
   persistAndRender();
 });
 
-// Kontrol Inspektor: Lebar, Transparansi, Toggle Overlay Kartu & Reset
-document.getElementById('close-inspector-btn')?.addEventListener('click', hideElementInspector);
-
-document.getElementById('insp-width-range')?.addEventListener('input', (e) => {
-  if (!selectedTargetId) return;
-  const val = Number(e.target.value);
-  document.getElementById('insp-width-lbl').textContent = val + '%';
-  appData.elementStyles[selectedTargetId] = { ...(appData.elementStyles[selectedTargetId] || {}), width: val };
-  applyElementStyles();
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
-});
-
-document.getElementById('insp-opacity-range')?.addEventListener('input', (e) => {
-  if (!selectedTargetId) return;
-  const val = Number(e.target.value);
-  document.getElementById('insp-opacity-lbl').textContent = val + '%';
-  appData.elementStyles[selectedTargetId] = { ...(appData.elementStyles[selectedTargetId] || {}), opacity: val };
-  applyElementStyles();
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
-});
-
-document.getElementById('toggle-el-overlay-btn')?.addEventListener('click', () => {
-  if (!selectedTargetId) return;
-  const el = document.getElementById(selectedTargetId);
-  if (!el) return;
-  recordSnapshot();
-  const currentlyHasOverlay = el.classList.contains('glass-card');
-  appData.elementStyles[selectedTargetId] = {
-    ...(appData.elementStyles[selectedTargetId] || {}),
-    noOverlay: currentlyHasOverlay
-  };
-  persistAndRender();
-});
-
-document.getElementById('reset-el-style-btn')?.addEventListener('click', () => {
-  if (!selectedTargetId) return;
-  recordSnapshot();
-  delete appData.elementStyles[selectedTargetId];
-  document.getElementById('insp-width-range').value = 100;
-  document.getElementById('insp-opacity-range').value = 100;
-  document.getElementById('insp-width-lbl').textContent = '100%';
-  document.getElementById('insp-opacity-lbl').textContent = '100%';
-  persistAndRender();
-});
-
-// Modal Bingkai Foto
-document.getElementById('open-frame-modal-btn')?.addEventListener('click', () => {
-  if (!selectedTargetId) return alert('Klik salah satu kartu atau bagian halaman terlebih dahulu.');
-  const existing = appData.photoFrames?.[selectedTargetId];
-  document.getElementById('pf-shape').value = existing?.shape || 'circle';
-  document.getElementById('pf-img-url').value = existing?.url || '';
-  document.getElementById('pf-img-file').value = '';
-  document.getElementById('pf-size-range').value = existing?.size || 170;
-  document.getElementById('pf-size-lbl').textContent = (existing?.size || 170) + 'px';
-  document.getElementById('pf-caption').value = existing?.caption || '';
-  document.getElementById('photo-frame-modal')?.classList.remove('hidden');
-});
-
+// Modal Bingkai Foto (Simpan & Hapus Bingkai)
 document.getElementById('pf-size-range')?.addEventListener('input', (e) => {
   document.getElementById('pf-size-lbl').textContent = e.target.value + 'px';
 });
@@ -339,6 +762,7 @@ document.getElementById('close-frame-modal')?.addEventListener('click', () => {
 
 document.getElementById('save-frame-btn')?.addEventListener('click', () => {
   if (!selectedTargetId) return;
+  const hostId = getFrameHostId(selectedTargetId);
   const shape = document.getElementById('pf-shape')?.value || 'circle';
   const size = Number(document.getElementById('pf-size-range')?.value || 170);
   const caption = document.getElementById('pf-caption')?.value.trim() || '';
@@ -349,9 +773,11 @@ document.getElementById('save-frame-btn')?.addEventListener('click', () => {
     if (!finalUrl) return alert('Masukkan URL gambar atau pilih foto dari perangkat.');
     recordSnapshot();
     appData.photoFrames = appData.photoFrames || {};
-    appData.photoFrames[selectedTargetId] = { shape, size, caption, url: finalUrl };
+    appData.photoFrames[hostId] = { shape, size, caption, url: finalUrl };
     document.getElementById('photo-frame-modal')?.classList.add('hidden');
     persistAndRender();
+    const widget = document.getElementById('pf-widget-' + hostId);
+    if (widget && isSelectorMode) selectElementForInspector(widget);
   };
 
   if (fileIn?.files?.[0]) {
@@ -359,40 +785,39 @@ document.getElementById('save-frame-btn')?.addEventListener('click', () => {
     reader.onload = (evt) => commitFrame(String(evt.target?.result || ''));
     reader.readAsDataURL(fileIn.files[0]);
   } else {
-    commitFrame(urlIn);
+    commitFrame(urlIn || appData.photoFrames?.[hostId]?.url || '');
   }
 });
 
 document.getElementById('remove-frame-btn')?.addEventListener('click', () => {
   if (!selectedTargetId) return;
+  const hostId = getFrameHostId(selectedTargetId);
   recordSnapshot();
-  if (appData.photoFrames) delete appData.photoFrames[selectedTargetId];
+  if (appData.photoFrames) delete appData.photoFrames[hostId];
+  if (appData.elementStyles) delete appData.elementStyles['pf-widget-' + hostId];
+  clearElementSelection();
   document.getElementById('photo-frame-modal')?.classList.add('hidden');
   persistAndRender();
 });
 
-// Toggle Menu Mobile, Panel Editor, Undo, Redo & Mode Pratinjau Pengunjung
+// Menu Mobile, Undo, Redo & Mode Pratinjau Pengunjung
 document.getElementById('menu-toggle')?.addEventListener('click', () => {
   document.getElementById('nav-links')?.classList.toggle('active');
 });
 
-document.getElementById('toggle-editor-btn')?.addEventListener('click', () => {
-  document.getElementById('editor-panel')?.classList.toggle('hidden');
-});
-
-document.getElementById('close-editor-btn')?.addEventListener('click', () => {
-  document.getElementById('editor-panel')?.classList.add('hidden');
-});
-
 document.getElementById('preview-mode-btn')?.addEventListener('click', () => {
   isEditorActive = false;
+  isSelectorMode = false;
+  clearElementSelection();
   syncEditorModeAttributes();
+  updateBottomSafePadding();
 });
 
 document.getElementById('resume-edit-btn')?.addEventListener('click', () => {
   if (!isAdminLoggedIn) return;
   isEditorActive = true;
   syncEditorModeAttributes();
+  updateBottomSafePadding();
 });
 
 document.getElementById('undo-btn')?.addEventListener('click', () => {
@@ -409,7 +834,7 @@ document.getElementById('redo-btn')?.addEventListener('click', () => {
   if (next) { appData = JSON.parse(next); persistAndRender(); }
 });
 
-// Ubah Warna Teks Pilihan
+// Warna Teks Pilihan
 document.getElementById('apply-selection-color-btn')?.addEventListener('click', () => {
   const color = document.getElementById('selection-text-color')?.value || '#00e5ff';
   const sel = window.getSelection();
@@ -438,17 +863,7 @@ document.getElementById('apply-selection-color-btn')?.addEventListener('click', 
   }
 });
 
-// Tab Panel Editor
-document.querySelectorAll('.ed-tab').forEach(tab => {
-  tab.addEventListener('click', () => {
-    document.querySelectorAll('.ed-tab').forEach(t => t.classList.remove('active'));
-    document.querySelectorAll('.ed-tab-content').forEach(c => c.classList.remove('active'));
-    tab.classList.add('active');
-    if (tab.dataset.tab) document.getElementById(tab.dataset.tab)?.classList.add('active');
-  });
-});
-
-// Tambahkan Blok Teks Baru & Halaman Baru
+// Tambah Blok Teks & Halaman Baru
 document.getElementById('add-text-block-btn')?.addEventListener('click', () => {
   const hIn = document.getElementById('new-text-heading');
   const bIn = document.getElementById('new-text-body');
@@ -550,7 +965,7 @@ document.getElementById('save-media-card-btn')?.addEventListener('click', () => 
   }
 });
 
-// Estetika: Tema, Background Jernih Tanpa Grid, Tipografi & Sudut
+// Estetika: Tema, Background, Tipografi & Sudut
 document.querySelectorAll('.preset-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     const key = btn.dataset.preset || 'cyber';
@@ -584,7 +999,7 @@ document.getElementById('bg-opacity-range')?.addEventListener('input', (e) => {
 document.getElementById('bg-blur-range')?.addEventListener('input', (e) => {
   const val = Number(e.target.value);
   appData.theme.bgBlur = val;
-  document.getElementById('bg-blur-lbl').textContent = val + 'px';
+document.getElementById('bg-blur-lbl').textContent = val + 'px';
   applyTheme();
   localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
 });
@@ -645,8 +1060,9 @@ document.getElementById('export-html-btn')?.addEventListener('click', async () =
   } catch {}
 
   const cloneDoc = document.documentElement.cloneNode(true);
-  cloneDoc.querySelector('body')?.classList.remove('editor-active');
-  cloneDoc.querySelectorAll('#editor-dock, #admin-preview-dock, #editor-panel, #element-inspector, #media-card-modal, #photo-frame-modal, #admin-login-modal, .nav-admin-login-item, .delete-section-btn, .delete-page-nav-btn, .card-editor-tools, .editor-only-inline').forEach(el => el.remove());
+  cloneDoc.querySelector('body')?.classList.remove('editor-active', 'selector-mode-active', 'drawer-open');
+  cloneDoc.querySelector('body')?.style.removeProperty('padding-bottom');
+  cloneDoc.querySelectorAll('#editor-dock, #admin-preview-dock, #editor-panel, #selector-mode-banner, #smart-guide-v, #smart-guide-h, .page-length-bar, .canva-resize-overlay, #media-card-modal, #photo-frame-modal, #admin-login-modal, .nav-admin-login-item, .delete-section-btn, .delete-page-nav-btn, .card-editor-tools, .editor-only-inline').forEach(el => el.remove());
   cloneDoc.querySelectorAll('[contenteditable]').forEach(el => el.removeAttribute('contenteditable'));
 
   if (cssText) {
@@ -723,4 +1139,4 @@ if (savedRaw) {
   } catch {}
 }
 renderAllUI();
-
+updateBottomSafePadding();

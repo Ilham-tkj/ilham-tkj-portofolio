@@ -8,10 +8,8 @@ function persistAndRender() {
 function renderAllUI() {
   applyTheme();
   renderNavigation();
-  renderSubnavPillBar();
-  renderCustomPages();
-  renderDynamicSubBlocks();
-  renderAllMediaCards();
+  renderDynamicSubSections();
+  renderMediaCards();
   renderPhotoFrames();
   applyElementStyles();
   applyTextEdits();
@@ -19,186 +17,168 @@ function renderAllUI() {
   switchPage(currentPageId, false);
   syncEditorModeAttributes();
   updateHistoryButtons();
+
+  const accIn = document.getElementById('pick-accent');
+  const bgIn = document.getElementById('pick-bg');
+  const cardIn = document.getElementById('pick-card');
+  const txtIn = document.getElementById('pick-text');
+  const opIn = document.getElementById('bg-opacity-range');
+  const blurIn = document.getElementById('bg-blur-range');
+  const fontSel = document.getElementById('font-style-select');
+  const radIn = document.getElementById('card-radius-range');
+  const gridChk = document.getElementById('toggle-grid-bg');
+
+  if (accIn) accIn.value = appData.theme.accent;
+  if (bgIn) bgIn.value = appData.theme.bg;
+  if (cardIn) cardIn.value = appData.theme.card;
+  if (txtIn) txtIn.value = appData.theme.text;
+  if (opIn) {
+    opIn.value = String(appData.theme.bgOpacity ?? 90);
+    const opLbl = document.getElementById('bg-op-lbl');
+    if (opLbl) opLbl.textContent = (appData.theme.bgOpacity ?? 90) + '%';
+  }
+  if (blurIn) {
+    blurIn.value = String(appData.theme.bgBlur ?? 0);
+    const blurLbl = document.getElementById('bg-blur-lbl');
+    if (blurLbl) blurLbl.textContent = (appData.theme.bgBlur ?? 0) + 'px';
+  }
+  if (fontSel) fontSel.value = appData.theme.fontStyle || 'sans';
+  if (radIn) {
+    radIn.value = String(appData.theme.cardRadius ?? 14);
+    const radLbl = document.getElementById('radius-val-lbl');
+    if (radLbl) radLbl.textContent = (appData.theme.cardRadius ?? 14) + 'px';
+  }
+  if (gridChk) gridChk.checked = appData.theme.showGrid !== false;
 }
 
 function renderNavigation() {
-  const navLinksEl = document.getElementById('nav-links');
-  if (!navLinksEl) return;
-  navLinksEl.innerHTML = '';
+  const navList = document.getElementById('nav-links');
+  if (!navList) return;
+  navList.innerHTML = '';
 
   appData.pages.forEach(page => {
     const li = document.createElement('li');
     li.className = 'nav-group';
 
     const row = document.createElement('div');
-    row.className = 'nav-main-row' + (page.id === currentPageId ? ' active' : '');
+    row.className = 'nav-item-row';
 
-    const pageBtn = document.createElement('button');
-    pageBtn.type = 'button';
-    pageBtn.className = 'nav-page-btn';
-    pageBtn.textContent = page.title;
-    pageBtn.addEventListener('click', () => {
-      if (isEditorActive) return;
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'nav-page-btn' + (page.id === currentPageId ? ' active' : '');
+    btn.textContent = page.title;
+    btn.setAttribute('contenteditable', isEditorActive && !isSelectorMode ? 'true' : 'false');
+
+    btn.addEventListener('input', () => {
+      page.title = btn.textContent?.trim() || page.title;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
+    });
+
+    btn.addEventListener('click', (e) => {
+      if (isEditorActive && document.activeElement === btn && e.detail > 1) return;
       switchPage(page.id, true);
-      navLinksEl.classList.remove('active');
+      document.getElementById('nav-links')?.classList.remove('active');
     });
 
-    pageBtn.addEventListener('blur', () => {
-      const txt = pageBtn.textContent.trim();
-      if (txt && txt !== page.title) {
-        recordSnapshot();
-        page.title = txt;
-        persistAndRender();
-      }
-    });
+    row.appendChild(btn);
 
-    row.appendChild(pageBtn);
-
-    const visibleSubs = page.subs.filter(s => !appData.hiddenBlocks.includes(s.id));
-    if (visibleSubs.length > 0) {
-      const subToggle = document.createElement('button');
-      subToggle.type = 'button';
-      subToggle.className = 'nav-sub-toggle';
-      subToggle.textContent = '▾';
-      subToggle.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const wasOpen = li.classList.contains('open');
-        document.querySelectorAll('.nav-group.open').forEach(g => g.classList.remove('open'));
-        if (!wasOpen) li.classList.add('open');
-      });
-      row.appendChild(subToggle);
-    }
-
-    if (appData.pages.length > 1) {
+    if (page.custom) {
       const delPageBtn = document.createElement('button');
       delPageBtn.type = 'button';
       delPageBtn.className = 'delete-page-nav-btn';
       delPageBtn.textContent = '×';
-      delPageBtn.title = 'Hapus Halaman ' + page.title;
+      delPageBtn.title = 'Hapus Halaman';
       delPageBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         recordSnapshot();
         appData.pages = appData.pages.filter(p => p.id !== page.id);
         document.getElementById('page-' + page.id)?.remove();
-        if (currentPageId === page.id) currentPageId = appData.pages[0].id;
+        if (currentPageId === page.id) currentPageId = 'beranda';
         persistAndRender();
       });
       row.appendChild(delPageBtn);
     }
 
     li.appendChild(row);
-
-    if (visibleSubs.length > 0) {
-      const subUl = document.createElement('ul');
-      subUl.className = 'nav-sub-menu';
-      visibleSubs.forEach(sub => {
-        const subLi = document.createElement('li');
-        const subBtn = document.createElement('button');
-        subBtn.type = 'button';
-        subBtn.className = 'nav-sub-link';
-        subBtn.textContent = '↳ ' + sub.title;
-        subBtn.addEventListener('click', () => {
-          switchPage(page.id, false);
-          li.classList.remove('open');
-          navLinksEl.classList.remove('active');
-          setTimeout(() => {
-            document.getElementById(sub.id)?.scrollIntoView({ behavior: 'smooth' });
-          }, 60);
-        });
-        subLi.appendChild(subBtn);
-        subUl.appendChild(subLi);
-      });
-      li.appendChild(subUl);
-    }
-
-    navLinksEl.appendChild(li);
+    navList.appendChild(li);
   });
 
-  (appData.topbarLinks || []).forEach(lnk => {
+  // Render Link Menu Custom di Top Bar
+  (appData.topbarLinks || []).forEach(link => {
     const li = document.createElement('li');
-    li.className = 'topbar-custom-link';
+    li.className = 'nav-group';
+    const row = document.createElement('div');
+    row.className = 'nav-item-row';
 
     const a = document.createElement('a');
-    a.href = lnk.url;
+    a.className = 'nav-custom-link';
+    a.href = link.url;
     a.target = '_blank';
-    a.rel = 'noopener';
-    a.className = 'nav-page-btn';
-    a.textContent = lnk.label;
-    a.addEventListener('click', (e) => { if (isEditorActive) e.preventDefault(); });
-    a.addEventListener('blur', () => {
-      const txt = a.textContent.trim();
-      if (txt && txt !== lnk.label) {
-        recordSnapshot();
-        lnk.label = txt;
-        persistAndRender();
-      }
-    });
+    a.rel = 'noopener noreferrer';
+    a.textContent = link.label;
+    row.appendChild(a);
 
-    const del = document.createElement('button');
-    del.type = 'button';
-    del.className = 'delete-page-nav-btn';
-    del.textContent = '×';
-    del.addEventListener('click', () => {
+    const delBtn = document.createElement('button');
+    delBtn.type = 'button';
+    delBtn.className = 'delete-page-nav-btn';
+    delBtn.textContent = '×';
+    delBtn.title = 'Hapus Menu';
+    delBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
       recordSnapshot();
-      appData.topbarLinks = appData.topbarLinks.filter(x => x.id !== lnk.id);
+      appData.topbarLinks = appData.topbarLinks.filter(x => x.id !== link.id);
       persistAndRender();
     });
+    row.appendChild(delBtn);
 
-    li.append(a, del);
-    navLinksEl.appendChild(li);
+    li.appendChild(row);
+    navList.appendChild(li);
   });
 
-  // Tombol Login Avatar di Top Bar
-  const loginLi = document.createElement('li');
-  loginLi.className = 'nav-admin-login-item';
-  const loginBtn = document.createElement('button');
-  loginBtn.type = 'button';
-  loginBtn.id = 'topbar-admin-login-btn';
-  loginBtn.className = 'topbar-avatar-btn' + (isAdminLoggedIn ? ' is-logged-in' : '');
-  loginBtn.title = isAdminLoggedIn ? 'Admin Aktif (Klik untuk buka Panel)' : 'Login Admin Studio';
+  // Render Tombol Login Icon / Avatar di Pojok Kanan Top Bar (Hanya saat belum login)
+  if (!isAdminLoggedIn) {
+    const loginLi = document.createElement('li');
+    loginLi.className = 'nav-admin-login-item';
+    const loginBtn = document.createElement('button');
+    loginBtn.type = 'button';
+    loginBtn.className = 'nav-login-icon-btn';
+    loginBtn.title = 'Login Admin Studio';
+    loginBtn.setAttribute('aria-label', 'Login Admin Studio');
 
-  const avatarSrc = appData.adminCreds?.avatar;
-  if (avatarSrc) {
-    const img = document.createElement('img');
-    img.src = avatarSrc;
-    img.alt = 'Admin';
-    loginBtn.appendChild(img);
-  } else {
-    loginBtn.textContent = isAdminLoggedIn ? '🛠️' : '🔐';
+    const avatarSrc = appData.adminCreds?.avatar;
+    if (avatarSrc) {
+      loginBtn.innerHTML = `<img src="${avatarSrc}" alt="Admin">`;
+    } else {
+      loginBtn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`;
+    }
+
+    loginBtn.addEventListener('click', () => {
+      document.getElementById('nav-links')?.classList.remove('active');
+      document.getElementById('admin-login-error').textContent = '';
+      document.getElementById('admin-login-modal')?.classList.remove('hidden');
+    });
+    loginLi.appendChild(loginBtn);
+    navList.appendChild(loginLi);
   }
 
-  loginBtn.addEventListener('click', () => {
-    navLinksEl.classList.remove('active');
-    if (isAdminLoggedIn) {
-      isEditorActive = true;
-      syncEditorModeAttributes();
-      document.getElementById('editor-panel')?.classList.toggle('hidden');
-    } else {
-      document.getElementById('admin-login-error').textContent = '';
-      document.getElementById('admin-user-input').value = '';
-      document.getElementById('admin-pass-input').value = '';
-      document.getElementById('admin-login-modal')?.classList.remove('hidden');
-    }
-  });
-
-  loginLi.appendChild(loginBtn);
-  navLinksEl.appendChild(loginLi);
+  renderSubNavPills();
 }
 
-function renderSubnavPillBar() {
+function renderSubNavPills() {
   const bar = document.getElementById('page-subnav-bar');
   if (!bar) return;
   const page = appData.pages.find(p => p.id === currentPageId);
-  const visibleSubs = (page?.subs || []).filter(s => !appData.hiddenBlocks.includes(s.id));
+  const validSubs = (page?.subs || []).filter(s => !appData.hiddenBlocks.includes(s.id));
 
-  if (visibleSubs.length < 2) {
-    bar.classList.add('hidden');
+  if (validSubs.length === 0) {
     bar.innerHTML = '';
+    bar.classList.add('hidden');
     return;
   }
 
+  bar.classList.remove('hidden');
   bar.innerHTML = '';
-  visibleSubs.forEach((sub, idx) => {
+  validSubs.forEach((sub, idx) => {
     const pill = document.createElement('button');
     pill.type = 'button';
     pill.className = 'subnav-pill-btn' + (idx === 0 ? ' active' : '');
@@ -207,391 +187,224 @@ function renderSubnavPillBar() {
     pill.addEventListener('click', () => {
       document.querySelectorAll('.subnav-pill-btn').forEach(p => p.classList.remove('active'));
       pill.classList.add('active');
-      document.getElementById(sub.id)?.scrollIntoView({ behavior: 'smooth' });
+      document.getElementById(sub.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
     bar.appendChild(pill);
   });
-  bar.classList.remove('hidden');
 }
 
-function switchPage(pageId, scrollTop) {
+function switchPage(pageId, scrollToTop = true) {
   const exists = appData.pages.some(p => p.id === pageId);
-  currentPageId = exists ? pageId : (appData.pages[0]?.id || 'beranda');
+  currentPageId = exists ? pageId : 'beranda';
 
   document.querySelectorAll('.page-view').forEach(sec => {
     sec.classList.toggle('active', sec.dataset.pageId === currentPageId);
   });
 
-  renderNavigation();
-  renderSubnavPillBar();
-  syncEditorModeAttributes();
-  if (scrollTop) window.scrollTo({ top: 0, behavior: 'smooth' });
-}
-
-function renderCustomPages() {
-  const pagesHostEl = document.getElementById('pages-host');
-  if (!pagesHostEl) return;
-  document.querySelectorAll('.page-view.custom-created').forEach(el => el.remove());
-
-  appData.pages.filter(p => p.custom).forEach(page => {
-    const sec = document.createElement('section');
-    sec.className = 'page-view custom-created';
-    sec.id = 'page-' + page.id;
-    sec.dataset.pageId = page.id;
-
-    const introBlock = document.createElement('div');
-    introBlock.className = 'sub-block';
-    introBlock.id = 'intro-' + page.id;
-
-    const h2 = document.createElement('h2');
-    h2.className = 'section-title editable';
-    h2.dataset.key = 'ptitle-' + page.id;
-    h2.textContent = page.title;
-
-    const card = document.createElement('div');
-    card.className = 'glass-card float-hover';
-    card.id = 'card-intro-' + page.id;
-    const p = document.createElement('p');
-    p.className = 'editable';
-    p.dataset.key = 'pintro-' + page.id;
-    p.textContent = page.intro || 'Halaman baru siap diisi teks atau kartu media.';
-    card.appendChild(p);
-    introBlock.append(h2, card);
-
-    const dynArea = document.createElement('div');
-    dynArea.className = 'page-dynamic-area';
-    dynArea.dataset.pageArea = page.id;
-
-    sec.append(introBlock, dynArea);
-    pagesHostEl.appendChild(sec);
+  document.querySelectorAll('.nav-page-btn').forEach((btn, idx) => {
+    const pg = appData.pages[idx];
+    if (pg) btn.classList.toggle('active', pg.id === currentPageId);
   });
+
+  renderSubNavPills();
+  applyPageHeights();
+  if (scrollToTop) window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-function renderDynamicSubBlocks() {
+function renderDynamicSubSections() {
+  const host = document.getElementById('pages-host');
+  if (!host) return;
+
+  appData.pages.forEach(page => {
+    if (page.custom && !document.getElementById('page-' + page.id)) {
+      const sec = document.createElement('section');
+      sec.className = 'page-view';
+      sec.id = 'page-' + page.id;
+      sec.dataset.pageId = page.id;
+      sec.innerHTML = `
+        <div class="sub-block" id="intro-${page.id}">
+          <h2 class="section-title editable" data-key="pg-title-${page.id}">${page.title}</h2>
+          <div class="glass-card" id="card-intro-${page.id}">
+            <p class="editable" data-key="pg-intro-${page.id}">${page.intro || 'Klik teks ini di mode editor untuk mulai mengisi konten halaman.'}</p>
+          </div>
+        </div>
+        <div class="page-dynamic-area" data-page-area="${page.id}"></div>
+      `;
+      host.appendChild(sec);
+    }
+  });
+
   document.querySelectorAll('.page-dynamic-area').forEach(area => { area.innerHTML = ''; });
 
   appData.dynamicSubs.forEach(sub => {
-    if (appData.hiddenBlocks.includes(sub.id)) return;
-    const area = document.querySelector('.page-dynamic-area[data-page-area="' + sub.pageId + '"]');
+    const area = document.querySelector(`.page-dynamic-area[data-page-area="${sub.pageId}"]`);
     if (!area) return;
 
+    const useOverlay = sub.overlay !== false;
     const block = document.createElement('div');
     block.className = 'sub-block';
     block.id = sub.id;
 
-    const delBtn = document.createElement('button');
-    delBtn.type = 'button';
-    delBtn.className = 'delete-section-btn';
-    delBtn.dataset.removeTarget = sub.id;
-    delBtn.textContent = '🗑️ Hapus Teks';
-    block.appendChild(delBtn);
+    const titleHtml = sub.title
+      ? `<h2 class="section-title editable" data-key="sub-t-${sub.id}">${sub.title}</h2>`
+      : '';
 
-    if (sub.title) {
-      const h2 = document.createElement('h2');
-      h2.className = 'section-title editable';
-      h2.dataset.key = sub.id + '-t';
-      h2.textContent = sub.title;
-      block.appendChild(h2);
-    }
-
-    const useOverlay = sub.overlay !== false;
-    const card = document.createElement('div');
-    card.className = useOverlay ? 'glass-card float-hover' : 'text-plain-box';
-    card.id = 'card-' + sub.id;
-    card.dataset.dynSubId = sub.id;
-
-    const p = document.createElement('p');
-    p.className = 'editable';
-    p.dataset.key = sub.id + '-b';
-    p.textContent = sub.body;
-    card.appendChild(p);
-
-    block.appendChild(card);
+    block.innerHTML = `
+      <button type="button" class="delete-section-btn" data-remove-target="${sub.id}">🗑️ Hapus</button>
+      ${titleHtml}
+      <div class="${useOverlay ? 'glass-card float-hover' : 'text-plain-box'}" id="card-${sub.id}">
+        <p class="editable" data-key="sub-b-${sub.id}">${sub.body}</p>
+      </div>
+    `;
     area.appendChild(block);
   });
 }
 
-function buildMediaPreviewNode(item) {
-  if (!item.mediaUrl || item.mediaType === 'none') return null;
-  const box = document.createElement('div');
-  box.className = 'media-preview-box';
+function renderMediaCards() {
+  const proyekGrid = document.getElementById('media-cards-proyek');
+  const tugasGrid = document.getElementById('media-cards-tugas');
+  if (proyekGrid) proyekGrid.innerHTML = '';
+  if (tugasGrid) tugasGrid.innerHTML = '';
 
-  if (item.mediaType === 'image') {
-    const img = document.createElement('img');
-    img.src = item.mediaUrl;
-    img.alt = item.title;
-    img.addEventListener('click', (e) => {
-      if (isEditorActive) return;
-      e.stopPropagation();
-      openLightbox('image', item.mediaUrl, item.title);
-    });
-    box.appendChild(img);
-    return box;
-  }
-
-  if (item.mediaType === 'video') {
-    const yt = getYouTubeEmbed(item.mediaUrl);
-    if (yt) {
-      const frame = document.createElement('iframe');
-      frame.src = yt;
-      frame.height = '205';
-      frame.style.border = 'none';
-      frame.allowFullscreen = true;
-      box.appendChild(frame);
-    } else {
-      const vid = document.createElement('video');
-      vid.src = item.mediaUrl;
-      vid.controls = true;
-      box.appendChild(vid);
-    }
-    return box;
-  }
-
-  if (item.mediaType === 'file') {
-    const isPdf = item.mediaUrl.startsWith('data:application/pdf') || /\.pdf(\?|$)/i.test(item.mediaUrl) || /\.pdf$/i.test(item.fileName);
-    if (isPdf) {
-      const prevBtn = document.createElement('button');
-      prevBtn.type = 'button';
-      prevBtn.className = 'btn secondary sm';
-      prevBtn.textContent = '👁️ Pratinjau PDF (' + (item.fileName || 'Dokumen') + ')';
-      prevBtn.addEventListener('click', (e) => {
-        if (isEditorActive) return;
-        e.stopPropagation();
-        openLightbox('pdf', item.mediaUrl, item.fileName || item.title);
-      });
-      box.appendChild(prevBtn);
-    }
-    return box;
-  }
-  return null;
-}
-
-function renderAllMediaCards() {
-  const proyekSlot = document.getElementById('media-cards-proyek');
-  const tugasSlot = document.getElementById('media-cards-tugas');
-  if (proyekSlot) proyekSlot.innerHTML = '';
-  if (tugasSlot) tugasSlot.innerHTML = '';
-
-  appData.mediaCards.forEach(item => {
-    let targetContainer = document.getElementById('media-cards-' + item.group);
-    if (!targetContainer) {
-      const dynArea = document.querySelector('.page-dynamic-area[data-page-area="' + item.group + '"]');
-      if (dynArea) {
-        let grid = dynArea.querySelector('.fallback-media-grid');
-        if (!grid) {
-          grid = document.createElement('div');
-          grid.className = 'grid-cards fallback-media-grid';
-          grid.style.marginTop = '1.5rem';
-          dynArea.appendChild(grid);
+  appData.mediaCards.forEach(card => {
+    let targetContainer = proyekGrid;
+    if (card.group === 'tugas') {
+      targetContainer = tugasGrid;
+    } else if (card.group !== 'proyek') {
+      const pageArea = document.querySelector(`.page-dynamic-area[data-page-area="${card.group}"]`);
+      if (pageArea) {
+        let customGrid = pageArea.querySelector('.custom-page-media-grid');
+        if (!customGrid) {
+          customGrid = document.createElement('div');
+          customGrid.className = 'grid-cards custom-page-media-grid';
+          customGrid.style.marginTop = '1.2rem';
+          pageArea.appendChild(customGrid);
         }
-        targetContainer = grid;
+        targetContainer = customGrid;
       }
     }
     if (!targetContainer) return;
 
-    const tpl = item.template || 'fullbleed';
-    const card = document.createElement('article');
-    card.className = 'glass-card float-hover media-card tpl-' + tpl;
-    card.id = item.id;
+    const tpl = card.template || 'fullbleed';
+    const el = document.createElement('article');
+    el.className = `glass-card media-card tpl-${tpl}`;
+    el.id = card.id;
 
-    const toolBar = document.createElement('div');
-    toolBar.className = 'card-editor-tools';
-
-    const editBtn = document.createElement('button');
-    editBtn.type = 'button';
-    editBtn.className = 'mini-tool-btn clone';
-    editBtn.textContent = '✏️';
-    editBtn.title = 'Edit Isi Kartu';
-    editBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      openMediaCardModal(item);
-    });
-
-    const cloneBtn = document.createElement('button');
-    cloneBtn.type = 'button';
-    cloneBtn.className = 'mini-tool-btn clone';
-    cloneBtn.textContent = '📋';
-    cloneBtn.title = 'Duplikasi Kartu';
-    cloneBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      recordSnapshot();
-      const copy = { ...item, id: 'mc-' + Date.now(), title: item.title + ' (Salinan)' };
-      appData.mediaCards.push(copy);
-      persistAndRender();
-    });
-
-    const delBtn = document.createElement('button');
-    delBtn.type = 'button';
-    delBtn.className = 'mini-tool-btn del';
-    delBtn.textContent = '🗑️';
-    delBtn.title = 'Hapus Kartu';
-    delBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      recordSnapshot();
-      appData.mediaCards = appData.mediaCards.filter(mc => mc.id !== item.id);
-      persistAndRender();
-    });
-
-    toolBar.append(editBtn, cloneBtn, delBtn);
-    card.appendChild(toolBar);
-
-    const preview = buildMediaPreviewNode(item);
-    const actions = document.createElement('div');
-    actions.className = 'media-card-actions';
-
-    if (item.mediaType === 'file' && item.mediaUrl) {
-      const dl = document.createElement('a');
-      dl.href = item.mediaUrl;
-      dl.download = item.fileName || 'tugas';
-      dl.className = 'btn secondary sm';
-      dl.textContent = '📄 Unduh ' + (item.fileName || 'File');
-      dl.addEventListener('click', (e) => { if (isEditorActive) e.preventDefault(); });
-      actions.appendChild(dl);
-    }
-    if (item.linkUrl) {
-      const lnk = document.createElement('a');
-      lnk.href = item.linkUrl;
-      lnk.target = '_blank';
-      lnk.rel = 'noopener';
-      lnk.className = 'btn primary sm';
-      lnk.textContent = '🔗 ' + (item.linkLabel || 'Buka Link');
-      lnk.addEventListener('click', (e) => { if (isEditorActive) e.preventDefault(); });
-      actions.appendChild(lnk);
+    let mediaHtml = '';
+    if (card.mediaType === 'image' && card.mediaUrl) {
+      mediaHtml = `<div class="media-preview-box" data-lightbox="image" data-src="${card.mediaUrl}" data-cap="${card.title}"><img src="${card.mediaUrl}" alt="${card.title}"></div>`;
+    } else if (card.mediaType === 'video' && card.mediaUrl) {
+      const yt = getYouTubeEmbed(card.mediaUrl);
+      mediaHtml = yt
+        ? `<div class="media-preview-box"><iframe src="${yt}" allowfullscreen></iframe></div>`
+        : `<div class="media-preview-box"><video src="${card.mediaUrl}" controls></video></div>`;
+    } else if (card.mediaType === 'file' && card.mediaUrl) {
+      const isPdf = card.mediaUrl.startsWith('data:application/pdf') || card.mediaUrl.toLowerCase().endsWith('.pdf');
+      const viewBtn = isPdf
+        ? `<button type="button" class="btn primary sm" data-lightbox="pdf" data-src="${card.mediaUrl}" data-cap="${card.fileName || card.title}">👁️ Lihat PDF</button>`
+        : '';
+      mediaHtml = `<div class="file-chip"><span>📄 ${card.fileName || 'Dokumen Tugas'}</span><div>${viewBtn} <a href="${card.mediaUrl}" download="${card.fileName || 'tugas'}" class="btn secondary sm">⬇️ Unduh</a></div></div>`;
     }
 
-    if (tpl === 'bento' || tpl === 'horizontal') {
-      const leftMedia = document.createElement('div');
-      if (preview) leftMedia.appendChild(preview);
-      else {
-        const ph = document.createElement('div');
-        ph.className = 'bento-placeholder';
-        ph.textContent = item.badge || item.title;
-        leftMedia.appendChild(ph);
-      }
+    const tagsArray = (card.badge || '').split(',').map(t => t.trim()).filter(Boolean);
+    const pillsHtml = tagsArray.length > 0
+      ? `<div class="card-pills-row">${tagsArray.map(t => `<span class="tech-pill">${t}</span>`).join('')}</div>`
+      : '';
 
-      const rightBody = document.createElement('div');
-      rightBody.style.display = 'flex';
-      rightBody.style.flexDirection = 'column';
-      rightBody.style.gap = '0.6rem';
+    const linkHtml = card.linkUrl
+      ? `<div class="card-footer-action"><a href="${card.linkUrl}" target="_blank" rel="noopener noreferrer" class="btn secondary sm">${card.linkLabel || 'Buka Link'} ↗</a></div>`
+      : '';
 
-      if (item.badge) {
-        const b = document.createElement('span');
-        b.className = 'badge';
-        b.textContent = item.badge;
-        rightBody.appendChild(b);
-      }
-      const h3 = document.createElement('h3');
-      h3.textContent = item.title;
-      rightBody.appendChild(h3);
+    const toolsHtml = `
+      <div class="card-editor-tools">
+        <button type="button" class="btn secondary sm" data-edit-mc="${card.id}">✏️ Edit</button>
+        <button type="button" class="btn danger sm" data-del-mc="${card.id}">🗑️</button>
+      </div>
+    `;
 
-      if (item.desc) {
-        const p = document.createElement('p');
-        p.textContent = item.desc;
-        rightBody.appendChild(p);
-      }
-      if (actions.children.length > 0) rightBody.appendChild(actions);
-      card.append(leftMedia, rightBody);
-    } else if (tpl === 'fullbleed') {
-      const coverWrap = document.createElement('div');
-      coverWrap.className = 'fb-cover-wrap';
-
-      if (item.badge) {
-        const b = document.createElement('span');
-        b.className = 'badge';
-        b.textContent = item.badge;
-        coverWrap.appendChild(b);
-      }
-      if (preview) coverWrap.appendChild(preview);
-      else {
-        const iconSpan = document.createElement('span');
-        iconSpan.style.fontSize = '2.4rem';
-        iconSpan.textContent = '🖥️';
-        coverWrap.appendChild(iconSpan);
-      }
-
-      const pad = document.createElement('div');
-      pad.className = 'fb-content-pad';
-      const h3 = document.createElement('h3');
-      h3.textContent = item.title;
-      pad.appendChild(h3);
-
-      if (item.desc) {
-        const p = document.createElement('p');
-        p.textContent = item.desc;
-        pad.appendChild(p);
-      }
-      if (actions.children.length > 0) pad.appendChild(actions);
-      card.append(coverWrap, pad);
-    } else if (tpl === 'editorial' || tpl === 'quote' || tpl === 'announcement') {
-      if (item.badge) {
-        const b = document.createElement('span');
-        b.className = 'badge';
-        b.textContent = item.badge;
-        card.appendChild(b);
-      }
-      const h3 = document.createElement('h3');
-      h3.textContent = item.title;
-      card.appendChild(h3);
-
-      if (preview) card.appendChild(preview);
-
-      if (item.desc) {
-        const p = document.createElement('p');
-        p.textContent = item.desc;
-        card.appendChild(p);
-      }
-      if (actions.children.length > 0) card.appendChild(actions);
+    if (tpl === 'terminal') {
+      el.innerHTML = `
+        <div class="terminal-header">
+          <div class="term-dots"><span></span><span></span><span></span></div>
+          <span class="term-filename">${card.fileName || 'task_log.sh'}</span>
+        </div>
+        ${mediaHtml}
+        <div class="media-card-body">
+          <h3><span class="term-prompt">&gt;_</span> ${card.title}</h3>
+          <p>${card.desc}</p>
+          ${pillsHtml}
+          ${linkHtml}
+          ${toolsHtml}
+        </div>
+      `;
+    } else if (tpl === 'quote') {
+      el.innerHTML = `
+        <div class="media-card-body">
+          <div class="quote-mark">“</div>
+          <p class="quote-text">${card.desc}</p>
+          <h3 class="quote-author">— ${card.title}</h3>
+          ${pillsHtml}
+          ${linkHtml}
+          ${toolsHtml}
+        </div>
+      `;
+    } else if (tpl === 'announcement') {
+      el.innerHTML = `
+        <div class="media-card-body">
+          <div class="announce-top">
+            <span class="announce-badge">📢 INFO / PENGUMUMAN</span>
+            ${pillsHtml}
+          </div>
+          <h3>${card.title}</h3>
+          <p>${card.desc}</p>
+          ${mediaHtml}
+          ${linkHtml}
+          ${toolsHtml}
+        </div>
+      `;
+    } else if (tpl === 'editorial') {
+      el.innerHTML = `
+        <div class="media-card-body">
+          ${pillsHtml}
+          <h3 class="editorial-title">${card.title}</h3>
+          <p class="editorial-desc">${card.desc}</p>
+          ${mediaHtml}
+          ${linkHtml}
+          ${toolsHtml}
+        </div>
+      `;
     } else {
-      const topbar = document.createElement('div');
-      topbar.className = 'term-topbar';
-      const dots = document.createElement('div');
-      dots.className = 'term-dots';
-      ['#ef4444', '#f59e0b', '#10b981'].forEach(col => {
-        const d = document.createElement('span');
-        d.style.background = col;
-        dots.appendChild(d);
-      });
-      const fname = document.createElement('span');
-      fname.className = 'term-filename';
-      fname.textContent = item.fileName || (item.title.toLowerCase().replace(/\s+/g, '_') + '.log');
-      topbar.append(dots, fname);
-
-      const pad = document.createElement('div');
-      pad.className = 'term-content-pad';
-      if (preview) pad.appendChild(preview);
-
-      const h3 = document.createElement('h3');
-      h3.textContent = item.title;
-      pad.appendChild(h3);
-
-      if (item.desc) {
-        const p = document.createElement('p');
-        p.textContent = item.desc;
-        pad.appendChild(p);
-      }
-      if (item.badge) {
-        const tags = document.createElement('div');
-        tags.className = 'term-tags';
-        item.badge.split(/[,/]+/).forEach(t => {
-          const clean = t.trim();
-          if (!clean) return;
-          const tag = document.createElement('span');
-          tag.className = 'term-tag';
-          tag.textContent = '#' + clean.replace(/\s+/g, '');
-          tags.appendChild(tag);
-        });
-        pad.appendChild(tags);
-      }
-      if (actions.children.length > 0) pad.appendChild(actions);
-      card.append(topbar, pad);
+      el.innerHTML = `
+        ${mediaHtml}
+        <div class="media-card-body">
+          ${pillsHtml}
+          <h3>${card.title}</h3>
+          <p>${card.desc}</p>
+          ${linkHtml}
+          ${toolsHtml}
+        </div>
+      `;
     }
 
-    targetContainer.appendChild(card);
+    el.querySelector('[data-lightbox]')?.addEventListener('click', (e) => {
+      if (isEditorActive) return;
+      const box = e.currentTarget;
+      openLightbox(box.dataset.lightbox, box.dataset.src, box.dataset.cap);
+    });
+
+    el.querySelector('[data-edit-mc]')?.addEventListener('click', () => openMediaCardModal(card));
+    el.querySelector('[data-del-mc]')?.addEventListener('click', () => {
+      recordSnapshot();
+      appData.mediaCards = appData.mediaCards.filter(c => c.id !== card.id);
+      persistAndRender();
+    });
+
+    targetContainer.appendChild(el);
   });
 }
 
 function renderPhotoFrames() {
-  document.querySelectorAll('.photo-frame-box').forEach(el => el.remove());
+  document.querySelectorAll('.photo-frame-widget').forEach(w => w.remove());
   const frames = appData.photoFrames || {};
 
   Object.keys(frames).forEach(targetId => {
@@ -599,30 +412,34 @@ function renderPhotoFrames() {
     const host = document.getElementById(targetId);
     if (!host || !f || !f.url) return;
 
-    const wrap = document.createElement('figure');
-    wrap.className = 'photo-frame-box frame-' + (f.shape || 'circle');
-    wrap.style.setProperty('--frame-size', (f.size || 170) + 'px');
+    const wrap = document.createElement('div');
+    wrap.className = `photo-frame-widget frame-${f.shape || 'circle'}`;
+    wrap.id = 'pf-widget-' + targetId;
 
-    const img = document.createElement('img');
-    img.src = f.url;
-    img.alt = f.caption || 'Foto';
-    img.addEventListener('click', (e) => {
-      if (isEditorActive) return;
-      e.stopPropagation();
-      openLightbox('image', f.url, f.caption || 'Bingkai Foto');
-    });
-    wrap.appendChild(img);
+    const maxSafeSize = Math.min(f.size || 170, Math.round(window.innerWidth * 0.65));
+    const sizePx = maxSafeSize + 'px';
 
-    if (f.caption) {
-      const cap = document.createElement('figcaption');
-      cap.className = 'frame-cap';
-      cap.textContent = f.caption;
-      wrap.appendChild(cap);
+    wrap.innerHTML = `
+      <div class="pf-inner" style="width:${sizePx};height:${sizePx};">
+        <img src="${f.url}" alt="${f.caption || 'Foto'}">
+      </div>
+      ${f.caption ? `<span class="pf-cap">${f.caption}</span>` : ''}
+    `;
+
+    // Jika dipasang di Hero, taruh di atas .hero-content agar rapi & tidak menabrak teks
+    const heroContent = host.querySelector('.hero-content');
+    if (heroContent) {
+      heroContent.prepend(wrap);
+    } else {
+      host.prepend(wrap);
     }
-
-    const innerContent = host.querySelector('.hero-content') || host;
-    innerContent.prepend(wrap);
   });
+}
+
+function getCanvasScaleFactor(el) {
+  const host = el.closest('.page-view') || document.querySelector('main');
+  const currentCanvasW = host ? host.clientWidth : window.innerWidth;
+  return Math.max(0.32, Math.min(1.4, currentCanvasW / 1040));
 }
 
 function applyElementStyles() {
@@ -632,7 +449,13 @@ function applyElementStyles() {
     const el = document.getElementById(targetId);
     if (!el || !st) return;
 
-    if (st.width && st.width < 100) {
+    const scale = getCanvasScaleFactor(el);
+
+    if (st.widthPct) {
+      el.style.width = st.widthPct + '%';
+      el.style.maxWidth = '100%';
+      el.style.marginInline = 'auto';
+    } else if (st.width && st.width < 100) {
       el.style.width = st.width + '%';
       el.style.maxWidth = st.width + '%';
       el.style.marginInline = 'auto';
@@ -640,6 +463,26 @@ function applyElementStyles() {
       el.style.width = '';
       el.style.maxWidth = '';
       el.style.marginInline = '';
+    }
+
+    if (st.heightNormPx) {
+      el.style.minHeight = Math.round(st.heightNormPx * scale) + 'px';
+    } else if (st.customHeightPx) {
+      el.style.minHeight = st.customHeightPx + 'px';
+    } else {
+      el.style.minHeight = '';
+    }
+
+    const rawTx = st.txNorm !== undefined ? Math.round(st.txNorm * scale) : (st.tx || 0);
+    const rawTy = st.tyNorm !== undefined ? Math.round(st.tyNorm * scale) : (st.ty || 0);
+
+    if (rawTx || rawTy) {
+      el.style.position = 'relative';
+      el.style.left = rawTx + 'px';
+      el.style.top = rawTy + 'px';
+    } else {
+      el.style.left = '';
+      el.style.top = '';
     }
 
     if (st.opacity && st.opacity < 100) {
@@ -671,20 +514,60 @@ function applyHiddenBlocks() {
   });
 }
 
+function applyPageHeights() {
+  const heights = appData.pageHeights || {};
+  document.querySelectorAll('.page-view').forEach(sec => {
+    const pid = sec.dataset.pageId;
+    const hVal = heights[pid] || 0;
+    sec.style.minHeight = hVal > 0 ? hVal + 'px' : '';
+
+    let bar = sec.querySelector('.page-length-bar');
+    if (!bar) {
+      bar = document.createElement('div');
+      bar.className = 'page-length-bar';
+      bar.innerHTML = `
+        <button type="button" class="btn secondary sm" data-page-len-act="extend">➕ Tambah Panjang Halaman (+250px)</button>
+        <button type="button" class="btn secondary sm" data-page-len-act="shrink">➖ Kurangi</button>
+      `;
+      sec.appendChild(bar);
+    }
+  });
+
+  const lbl = document.getElementById('page-height-lbl');
+  if (lbl) {
+    const curH = heights[currentPageId] || 0;
+    lbl.textContent = curH > 0 ? curH + 'px' : 'Otomatis';
+  }
+}
+
 function syncEditorModeAttributes() {
+  if (!isEditorActive) isSelectorMode = false;
+
   document.body.classList.toggle('editor-active', isEditorActive);
+  document.body.classList.toggle('selector-mode-active', isEditorActive && isSelectorMode);
 
   document.getElementById('editor-dock')?.classList.toggle('hidden', !isEditorActive);
   document.getElementById('admin-preview-dock')?.classList.toggle('hidden', !(isAdminLoggedIn && !isEditorActive));
+  document.getElementById('selector-mode-banner')?.classList.toggle('hidden', !(isEditorActive && isSelectorMode));
 
-  if (!isEditorActive) {
-    document.getElementById('editor-panel')?.classList.add('hidden');
-    document.getElementById('element-inspector')?.classList.add('hidden');
-    document.querySelectorAll('.inspected-selected').forEach(el => el.classList.remove('inspected-selected'));
+  const selBtn = document.getElementById('toggle-selector-btn');
+  if (selBtn) {
+    selBtn.classList.toggle('selector-on', isSelectorMode);
+    selBtn.textContent = isSelectorMode ? '✅ Selector ON' : '🎯 Selector';
   }
 
+  if (!isEditorActive || !isSelectorMode) {
+    document.querySelectorAll('.inspected-selected').forEach(el => el.classList.remove('inspected-selected'));
+    document.querySelectorAll('.canva-resize-overlay').forEach(el => el.remove());
+  }
+
+  const panel = document.getElementById('editor-panel');
+  if (panel) panel.classList.toggle('hidden', !isEditorActive);
+
+  applyPageHeights();
+
   document.querySelectorAll('.editable, .nav-page-btn').forEach(el => {
-    el.setAttribute('contenteditable', isEditorActive ? 'true' : 'false');
+    el.setAttribute('contenteditable', isEditorActive && !isSelectorMode ? 'true' : 'false');
   });
 }
 

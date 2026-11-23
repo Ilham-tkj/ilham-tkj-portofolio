@@ -144,7 +144,17 @@
 
   </main>
 
-    <!-- MODAL LOGIN ADMIN -->
+    <!-- GARIS MAGNETIK SMART GUIDES (VERTIKAL & HORIZONTAL) -->
+  <div id="smart-guide-v" class="smart-guide-line vertical"></div>
+  <div id="smart-guide-h" class="smart-guide-line horizontal"></div>
+
+  <!-- BANNER PETUNJUK SAAT MODE SELECTOR AKTIF -->
+  <div id="selector-mode-banner" class="selector-mode-banner hidden">
+    <span>🎯 Selector: Drag + Snap &amp; Resize (Ketuk ⋮ untuk opsi)</span>
+    <button type="button" id="exit-selector-banner-btn" class="btn primary sm" style="padding:2px 8px;font-size:0.72rem;">Selesai</button>
+  </div>
+
+  <!-- MODAL LOGIN ADMIN -->
   <div id="admin-login-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true">
     <div class="modal-box glass-card">
       <div class="modal-top">
@@ -170,173 +180,187 @@
     <button type="button" id="preview-logout-btn" class="dock-btn">🚪 Logout</button>
   </div>
 
-  <!-- TOMBOL MELAYANG EDITOR (HANYA MUNCUL SETELAH LOGIN ADMIN) -->
+    <!-- TOMBOL MELAYANG CEPAT (UNDO, REDO, SELECTOR, PRATINJAU) -->
   <div class="editor-floating-dock hidden" id="editor-dock">
     <button type="button" id="undo-btn" class="dock-btn" title="Undo Perubahan">↩️</button>
     <button type="button" id="redo-btn" class="dock-btn" title="Redo Perubahan">↪️</button>
+    <button type="button" id="toggle-selector-btn" class="dock-btn" title="Aktifkan Mode Selector (Drag & Resize Elemen)">🎯 Selector</button>
     <button type="button" id="preview-mode-btn" class="dock-btn" title="Keluar ke Mode Pratinjau Pengunjung">👁️ Pratinjau</button>
-    <button type="button" id="toggle-editor-btn" class="editor-fab">🛠️ Panel</button>
   </div>
 
-  <!-- PANEL STUDIO EDITOR -->
-  <aside id="editor-panel" class="editor-panel hidden">
-    <div class="editor-header">
-      <h3>🛠️ Studio Editor</h3>
-      <button type="button" id="close-editor-btn" aria-label="Tutup Panel">&times;</button>
-    </div>
+  <!-- BOTTOM SLIDE BAR ALA CANVA (PALING BAWAH LAYAR) -->
+  <aside id="editor-panel" class="canva-bottom-bar hidden">
+    <!-- Laci Konten yang Naik dari Bawah saat Tab Diklik -->
+    <div id="canva-slide-drawer" class="canva-slide-drawer hidden">
+      <div class="drawer-top-bar">
+        <h4 id="drawer-active-title">Template</h4>
+        <button type="button" id="close-editor-btn" class="drawer-close-btn" aria-label="Tutup Laci">&times;</button>
+      </div>
 
-    <div class="editor-tabs">
-      <button type="button" class="ed-tab active" data-tab="tab-halaman">📝 Konten</button>
-      <button type="button" class="ed-tab" data-tab="tab-media">🖼️ Kartu</button>
-      <button type="button" class="ed-tab" data-tab="tab-tema">🎨 Estetika</button>
-      <button type="button" class="ed-tab" data-tab="tab-export">🔐 Admin</button>
-    </div>
+      <!-- 1. TAB TEMPLATE -->
+      <div class="ed-tab-content" id="tab-template">
+        <p class="editor-tip">Pilih tata letak kartu siap pakai (Bento Wide, Full-Bleed, Editorial, Kutipan, atau Pengumuman).</p>
+        <button type="button" id="open-media-studio-btn" class="btn primary full">✨ Pilih Template Kartu</button>
+      </div>
 
-    <!-- TAB 1: TAMBAH TEKS, OVERLAY TEKS, HALAMAN & WARNA TEKS -->
-    <div class="ed-tab-content active" id="tab-halaman">
-      <div class="highlight-color-bar">
-        <span>🖍️ Warna Teks Pilihan:</span>
-        <div class="hl-actions">
-          <input type="color" id="selection-text-color" value="#00e5ff" title="Pilih Warna Teks">
-          <button type="button" id="apply-selection-color-btn" class="btn primary sm">Terapkan</button>
+      <!-- 2. TAB ELEMEN -->
+      <div class="ed-tab-content" id="tab-elemen">
+        <div class="editor-group">
+          <label>🎯 Mode Seleksi &amp; Bingkai</label>
+          <div class="btn-grid">
+            <button type="button" id="drawer-selector-btn" class="btn primary sm">🎯 Aktifkan Selector</button>
+            <button type="button" id="drawer-add-card-btn" class="btn secondary sm">+ Kartu Baru</button>
+          </div>
+          <p class="editor-tip" style="margin-top:0.35rem;">Saat <strong>Selector</strong> aktif, geser elemen (dengan garis magnetik), tarik sudut untuk resize, atau ketuk ikon <strong>⋮</strong> di pojok elemen.</p>
         </div>
       </div>
 
-      <div class="editor-group">
-        <label>📝 Tambahkan Blok Teks ke Halaman Aktif</label>
-        <input type="text" id="new-text-heading" placeholder="Judul Teks (opsional)">
-        <textarea id="new-text-body" rows="3" placeholder="Tulis paragraf atau catatan panjang di sini..."></textarea>
-        <label class="check-row">
-          <input type="checkbox" id="new-text-overlay" checked>
-          <span>Gunakan Card Overlay / Latar Kaca di Belakang Teks</span>
-        </label>
-        <button type="button" id="add-text-block-btn" class="btn primary full">+ Tambahkan Teks</button>
-      </div>
-
-      <hr class="ed-divider">
-
-      <div class="editor-group">
-        <label>➕ Buat Halaman Baru (Main Content)</label>
-        <input type="text" id="new-page-title" placeholder="Judul Halaman (misal: Sertifikat)">
-        <textarea id="new-page-intro" rows="2" placeholder="Deskripsi pembuka halaman..."></textarea>
-        <button type="button" id="create-page-btn" class="btn secondary full">Buat Halaman Baru</button>
-      </div>
-    </div>
-
-    <!-- TAB 2: KARTU TEKS & KARTU MEDIA -->
-    <div class="ed-tab-content" id="tab-media">
-      <p class="editor-tip">Pilih jenis <strong>Kartu Teks</strong> (Editorial, Kutipan, Pengumuman, Terminal) atau <strong>Kartu Media</strong> (Bento Wide, Full-Bleed, Horizontal Split).</p>
-      <button type="button" id="open-media-studio-btn" class="btn primary full">✨ Buat Kartu Teks / Media</button>
-      <hr class="ed-divider">
-      <p class="editor-tip">💡 Klik area pinggir kartu/blok untuk membuka <strong>Properti Elemen</strong> (Ukuran, Transparansi, Overlay Teks &amp; Bingkai Foto).</p>
-    </div>
-
-    <!-- TAB 3: ESTETIKA (TEMA, BACKGROUND JERNIH, TIPOGRAFI & SUDUT) -->
-    <div class="ed-tab-content" id="tab-tema">
-      <div class="preset-grid">
-        <button type="button" class="preset-btn" data-preset="cyber"><span class="swatch" style="background:#00e5ff;"></span> Cyber</button>
-        <button type="button" class="preset-btn" data-preset="matrix"><span class="swatch" style="background:#10b981;"></span> Matrix</button>
-        <button type="button" class="preset-btn" data-preset="sunset"><span class="swatch" style="background:#f59e0b;"></span> Sunset</button>
-        <button type="button" class="preset-btn" data-preset="light"><span class="swatch" style="background:#2563eb;"></span> Light</button>
-      </div>
-
-      <div class="color-grid" style="margin-top:0.65rem;">
-        <label class="color-item"><span>Aksen</span><input type="color" id="pick-accent" value="#00e5ff"></label>
-        <label class="color-item"><span>Latar</span><input type="color" id="pick-bg" value="#080c14"></label>
-        <label class="color-item"><span>Kartu</span><input type="color" id="pick-card" value="#131a28"></label>
-        <label class="color-item"><span>Teks</span><input type="color" id="pick-text" value="#f1f5f9"></label>
-      </div>
-
-      <div class="editor-group" style="margin-top:0.75rem;">
-        <label>🖼️ Gambar Background (Otomatis Hilangkan Grid)</label>
-        <input type="text" id="bg-image-url" placeholder="Tempel URL Gambar Background...">
-        <input type="file" id="bg-image-file" accept="image/*">
-        <div class="btn-grid">
-          <button type="button" id="apply-bg-btn" class="btn primary sm">Pasang BG</button>
-          <button type="button" id="clear-bg-btn" class="btn secondary sm">Hapus BG</button>
+      <!-- 3. TAB TEKS -->
+      <div class="ed-tab-content" id="tab-teks">
+        <div class="highlight-color-bar">
+          <span>🖍️ Warna Teks Pilihan:</span>
+          <div class="hl-actions">
+            <input type="color" id="selection-text-color" value="#00e5ff" title="Pilih Warna Teks">
+            <button type="button" id="apply-selection-color-btn" class="btn primary sm">Terapkan</button>
+          </div>
         </div>
+        <div class="editor-group">
+          <input type="text" id="new-text-heading" placeholder="Judul Teks (opsional)">
+          <textarea id="new-text-body" rows="2" placeholder="Tulis paragraf atau catatan..."></textarea>
+          <label class="check-row">
+            <input type="checkbox" id="new-text-overlay" checked>
+            <span>Gunakan Card Overlay di Belakang Teks</span>
+          </label>
+          <button type="button" id="add-text-block-btn" class="btn primary full">+ Tambahkan Teks ke Halaman</button>
+        </div>
+      </div>
 
-        <label>☀️ Kecerahan Gambar BG (<span id="bg-op-lbl">90%</span>)</label>
-        <input type="range" id="bg-opacity-range" min="15" max="100" value="90">
+      <!-- 4. TAB GALERI (BACKGROUND & FOTO) -->
+      <div class="ed-tab-content" id="tab-galeri">
+        <div class="editor-group">
+          <label>🖼️ Gambar Background Halaman</label>
+          <input type="text" id="bg-image-url" placeholder="Tempel URL Gambar Background...">
+          <input type="file" id="bg-image-file" accept="image/*">
+          <div class="btn-grid">
+            <button type="button" id="apply-bg-btn" class="btn primary sm">Pasang BG</button>
+            <button type="button" id="clear-bg-btn" class="btn secondary sm">Hapus BG</button>
+          </div>
+          <label>☀️ Kecerahan BG (<span id="bg-op-lbl">90%</span>)</label>
+          <input type="range" id="bg-opacity-range" min="15" max="100" value="90">
+          <label>💧 Blur BG (<span id="bg-blur-lbl">0px</span>)</label>
+          <input type="range" id="bg-blur-range" min="0" max="14" value="0">
+        </div>
+      </div>
 
-        <label>💧 Blur Gambar BG (<span id="bg-blur-lbl">0px</span>)</label>
-        <input type="range" id="bg-blur-range" min="0" max="14" value="0">
+      <!-- 5. TAB MEREK (TEMA, WARNA, TIPOGRAFI & SUDUT) -->
+      <div class="ed-tab-content" id="tab-merek">
+        <div class="preset-grid">
+          <button type="button" class="preset-btn" data-preset="cyber"><span class="swatch" style="background:#00e5ff;"></span> Cyber</button>
+          <button type="button" class="preset-btn" data-preset="matrix"><span class="swatch" style="background:#10b981;"></span> Matrix</button>
+          <button type="button" class="preset-btn" data-preset="sunset"><span class="swatch" style="background:#f59e0b;"></span> Sunset</button>
+          <button type="button" class="preset-btn" data-preset="light"><span class="swatch" style="background:#2563eb;"></span> Light</button>
+        </div>
+        <div class="color-grid" style="margin-top:0.55rem;">
+          <label class="color-item"><span>Aksen</span><input type="color" id="pick-accent" value="#00e5ff"></label>
+          <label class="color-item"><span>Latar</span><input type="color" id="pick-bg" value="#080c14"></label>
+          <label class="color-item"><span>Kartu</span><input type="color" id="pick-card" value="#131a28"></label>
+          <label class="color-item"><span>Teks</span><input type="color" id="pick-text" value="#f1f5f9"></label>
+        </div>
+        <div class="editor-group" style="margin-top:0.55rem;">
+          <label>🔤 Tipografi &amp; Sudut Kartu (<span id="radius-val-lbl">14px</span>)</label>
+          <select id="font-style-select">
+            <option value="sans">Modern Clean Sans</option>
+            <option value="mono">Tech Developer Mono</option>
+            <option value="editorial">Classic Editorial Serif</option>
+          </select>
+          <input type="range" id="card-radius-range" min="0" max="28" value="14">
+          <label class="check-row">
+            <input type="checkbox" id="toggle-grid-bg" checked>
+            <span>Tampilkan Pola Cyber Grid</span>
+          </label>
+        </div>
+      </div>
 
+      <!-- 6. TAB HALAMAN (TAMBAH PANJANG HALAMAN & HALAMAN BARU) -->
+      <div class="ed-tab-content" id="tab-halaman">
+        <div class="editor-group">
+          <label>📏 Panjang Kanvas Halaman Aktif (<span id="page-height-lbl">Otomatis</span>)</label>
+          <div class="btn-grid">
+            <button type="button" id="extend-page-btn" class="btn primary sm">➕ Tambah Panjang (+250px)</button>
+            <button type="button" id="shrink-page-btn" class="btn secondary sm">➖ Kurangi (-250px)</button>
+          </div>
+          <button type="button" id="reset-page-height-btn" class="btn secondary sm full" style="margin-top:0.35rem;">🔄 Reset Panjang Otomatis</button>
+        </div>
         <hr class="ed-divider">
-
-        <label>🔤 Gaya Tipografi</label>
-        <select id="font-style-select">
-          <option value="sans">Modern Clean Sans</option>
-          <option value="mono">Tech Developer Mono</option>
-          <option value="editorial">Classic Editorial Serif</option>
-        </select>
-
-        <label>📐 Sudut Kartu (<span id="radius-val-lbl">14px</span>)</label>
-        <input type="range" id="card-radius-range" min="0" max="28" value="14">
-
-        <label class="check-row">
-          <input type="checkbox" id="toggle-grid-bg" checked>
-          <span>Tampilkan Pola Cyber Grid (Saat Tanpa Gambar BG)</span>
-        </label>
-      </div>
-    </div>
-
-    <!-- TAB 4: KEAMANAN ADMIN, AVATAR LOGIN & DEPLOY -->
-    <div class="ed-tab-content" id="tab-export">
-      <div class="editor-group">
-        <label>🖼️ Foto Avatar Tombol Login di Top Bar</label>
-        <input type="text" id="admin-avatar-url" placeholder="Tempel URL foto profil...">
-        <input type="file" id="admin-avatar-file" accept="image/*">
-        <div class="btn-grid">
-          <button type="button" id="save-admin-avatar-btn" class="btn primary sm">Simpan Avatar</button>
-          <button type="button" id="reset-admin-avatar-btn" class="btn secondary sm">Reset Ikon</button>
+        <div class="editor-group">
+          <label>📄 Buat Halaman Baru (Main Content)</label>
+          <input type="text" id="new-page-title" placeholder="Judul Halaman (misal: Sertifikat)">
+          <textarea id="new-page-intro" rows="2" placeholder="Deskripsi pembuka halaman..."></textarea>
+          <button type="button" id="create-page-btn" class="btn secondary full">Buat Halaman Baru</button>
         </div>
       </div>
 
-      <hr class="ed-divider">
-
-      <div class="editor-group">
-        <label>🔑 Ubah Password Admin</label>
-        <input type="password" id="new-admin-pass" placeholder="Password admin baru...">
-        <button type="button" id="save-admin-pass-btn" class="btn secondary sm full">Simpan Password Baru</button>
-        <button type="button" id="logout-admin-btn" class="btn danger sm full">🚪 Logout Admin (Kembali ke Pengunjung)</button>
-      </div>
-
-      <hr class="ed-divider">
-
-      <div class="editor-group">
-        <label>🌐 Generator HTML Siap Deploy (GitHub Pages)</label>
-        <button type="button" id="export-html-btn" class="btn primary full">⬇️ Download File HTML Final</button>
-        <div class="btn-grid" style="margin-top:0.35rem;">
-          <button type="button" id="export-data-btn" class="btn secondary sm">Export JSON</button>
-          <button type="button" id="import-data-btn" class="btn secondary sm">Import JSON</button>
-          <input type="file" id="import-file-input" accept=".json" class="hidden">
+      <!-- 7. TAB UNGGAH / ADMIN & EXPORT -->
+      <div class="ed-tab-content" id="tab-export">
+        <div class="editor-group">
+          <label>🌐 Export &amp; Cadangan Data</label>
+          <button type="button" id="export-html-btn" class="btn primary full">⬇️ Download File HTML Final</button>
+          <div class="btn-grid" style="margin-top:0.35rem;">
+            <button type="button" id="export-data-btn" class="btn secondary sm">Export JSON</button>
+            <button type="button" id="import-data-btn" class="btn secondary sm">Import JSON</button>
+            <input type="file" id="import-file-input" accept=".json" class="hidden">
+          </div>
         </div>
-        <button type="button" id="reset-data-btn" class="btn danger sm full" style="margin-top:0.35rem;">🗑️ Reset Semua ke Awal</button>
+        <hr class="ed-divider">
+        <div class="editor-group">
+          <label>🖼️ Avatar Login &amp; Password Admin</label>
+          <input type="text" id="admin-avatar-url" placeholder="URL foto profil login...">
+          <input type="file" id="admin-avatar-file" accept="image/*">
+          <div class="btn-grid">
+            <button type="button" id="save-admin-avatar-btn" class="btn primary sm">Simpan Avatar</button>
+            <button type="button" id="reset-admin-avatar-btn" class="btn secondary sm">Reset Ikon</button>
+          </div>
+          <input type="password" id="new-admin-pass" placeholder="Password admin baru..." style="margin-top:0.4rem;">
+          <button type="button" id="save-admin-pass-btn" class="btn secondary sm full">Simpan Password</button>
+          <button type="button" id="logout-admin-btn" class="btn danger sm full">🚪 Logout Admin</button>
+          <button type="button" id="reset-data-btn" class="btn danger sm full">🗑️ Reset Semua ke Awal</button>
+        </div>
       </div>
     </div>
+
+    <!-- Deretan Ikon Slide Bar Paling Bawah (Gaya Canva) -->
+    <nav class="canva-slide-strip" aria-label="Menu Studio Editor">
+      <button type="button" class="canva-tool-tab" data-tab="tab-template" data-label="Template">
+        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3"/><line x1="12" y1="3" x2="12" y2="21"/><line x1="12" y1="12" x2="21" y2="12"/></svg>
+        <span>Template</span>
+      </button>
+      <button type="button" class="canva-tool-tab" data-tab="tab-elemen" data-label="Elemen">
+        <svg viewBox="0 0 24 24"><polygon points="12 3 19 8 16 18 8 18 5 8"/><circle cx="17" cy="17" r="3"/></svg>
+        <span>Elemen</span>
+      </button>
+      <button type="button" class="canva-tool-tab" data-tab="tab-teks" data-label="Teks">
+        <svg viewBox="0 0 24 24"><polyline points="5 6 5 4 19 4 19 6"/><line x1="12" y1="4" x2="12" y2="20"/><line x1="9" y1="20" x2="15" y2="20"/></svg>
+        <span>Teks</span>
+      </button>
+      <button type="button" class="canva-tool-tab" data-tab="tab-galeri" data-label="Galeri">
+        <svg viewBox="0 0 24 24"><path d="M4 8h3l2-2h6l2 2h3a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2z"/><circle cx="12" cy="13" r="3.5"/></svg>
+        <span>Galeri</span>
+      </button>
+      <button type="button" class="canva-tool-tab" data-tab="tab-merek" data-label="Merek">
+        <svg viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+        <span>Merek</span>
+      </button>
+      <button type="button" class="canva-tool-tab" data-tab="tab-halaman" data-label="Halaman & Panjang">
+        <svg viewBox="0 0 24 24"><path d="M12 3v18"/><polyline points="8 7 12 3 16 7"/><polyline points="8 17 12 21 16 17"/></svg>
+        <span>Halaman</span>
+      </button>
+      <button type="button" class="canva-tool-tab" data-tab="tab-export" data-label="Unggah & Admin">
+        <svg viewBox="0 0 24 24"><path d="M12 16V4"/><polyline points="7 9 12 4 17 9"/><path d="M20 16v3a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-3"/></svg>
+        <span>Unggah</span>
+      </button>
+    </nav>
   </aside>
 
-  <!-- INSPEKTOR ELEMEN (OTOMATIS HILANG SAAT MENGETIK TEKS) -->
-  <div id="element-inspector" class="element-inspector hidden">
-    <div class="insp-top">
-      <strong id="insp-target-name">🎛️ Properti Elemen</strong>
-      <button type="button" id="close-inspector-btn">&times;</button>
-    </div>
-    <div class="insp-grid">
-      <label>↔️ Lebar Elemen (<span id="insp-width-lbl">100%</span>)
-        <input type="range" id="insp-width-range" min="45" max="100" value="100">
-      </label>
-      <label>👻 Transparansi (<span id="insp-opacity-lbl">100%</span>)
-        <input type="range" id="insp-opacity-range" min="15" max="100" value="100">
-      </label>
-    </div>
-    <div class="insp-actions">
-      <button type="button" id="toggle-el-overlay-btn" class="btn secondary sm">🪟 Toggle Overlay Kartu</button>
-      <button type="button" id="open-frame-modal-btn" class="btn primary sm">🖼️ Bingkai Foto</button>
-      <button type="button" id="reset-el-style-btn" class="btn secondary sm">Reset</button>
-    </div>
-  </div>
 
   <!-- MODAL PILIHAN BINGKAI FOTO (5 BENTUK) -->
   <div id="photo-frame-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true">

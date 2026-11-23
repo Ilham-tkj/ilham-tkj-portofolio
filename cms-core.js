@@ -1,6 +1,6 @@
 // @ts-nocheck
 /* eslint-disable */
-const STORAGE_KEY = 'hamz_modular_cms_v6';
+const STORAGE_KEY = 'hamz_modular_cms_v7';
 const ADMIN_AUTH_KEY = 'hamz_admin_session_persist';
 
 let appData = {
@@ -96,6 +96,7 @@ let undoStack = [];
 let redoStack = [];
 let isAdminLoggedIn = localStorage.getItem(ADMIN_AUTH_KEY) === '1';
 let isEditorActive = isAdminLoggedIn;
+let isSelectorMode = false;
 let currentPageId = 'beranda';
 let editingMediaCardId = '';
 let selectedTargetId = '';
@@ -184,4 +185,3 @@ function openLightbox(kind, src, caption) {
 }
 
 window.HAMZ_CORE = { STORAGE_KEY, ADMIN_AUTH_KEY, THEME_PRESETS, recordSnapshot, applyTheme, getYouTubeEmbed, openLightbox };
-
