@@ -1158,7 +1158,7 @@ contactForm?.addEventListener('submit', (e) => {
 const FIREBASE_URL_KEY = 'hamz_firebase_db_url';
 // Tempel URL Firebase Realtime Database kamu di dalam tanda kutip di bawah ini
 // agar semua perangkat otomatis terhubung tanpa input ulang:
-const DEFAULT_FIREBASE_URL = '';
+const DEFAULT_FIREBASE_URL = 'https://ilham-portofolio-b57dc-default-rtdb.asia-southeast1.firebasedatabase.app/';
 
 function getFirebaseBaseUrl() {
   const saved = localStorage.getItem(FIREBASE_URL_KEY) || DEFAULT_FIREBASE_URL;
