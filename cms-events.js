@@ -613,13 +613,32 @@ document.getElementById('cancel-admin-login-btn')?.addEventListener('click', () 
   document.getElementById('admin-login-modal')?.classList.add('hidden');
 });
 
-document.getElementById('submit-admin-login-btn')?.addEventListener('click', () => {
-  const u = document.getElementById('admin-user-input')?.value.trim() || '';
-  const p = document.getElementById('admin-pass-input')?.value || '';
-  const validU = appData.adminCreds?.username || 'admin';
-  const validP = appData.adminCreds?.password || '123';
+document.getElementById('submit-admin-login-btn')?.addEventListener('click', async () => {
+  const email = document.getElementById('admin-user-input')?.value.trim() || '';
+  const password = document.getElementById('admin-pass-input')?.value || '';
+  const errEl = document.getElementById('admin-login-error');
+  const btn = document.getElementById('submit-admin-login-btn');
 
-  if (u === validU && p === validP) {
+  if (!email || !password) {
+    if (errEl) errEl.textContent = 'Isi email dan password admin!';
+    return;
+  }
+
+  if (btn) { btn.disabled = true; btn.textContent = 'Memverifikasi...'; }
+  if (errEl) errEl.textContent = '';
+
+  try {
+    const res = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${FIREBASE_WEB_API_KEY}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password, returnSecureToken: true })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error?.message || 'Login gagal');
+
+    localStorage.setItem(FIREBASE_TOKEN_KEY, data.idToken);
+    localStorage.setItem(FIREBASE_REFRESH_KEY, data.refreshToken);
+
     isAdminLoggedIn = true;
     isEditorActive = true;
     isSelectorMode = false;
@@ -628,10 +647,13 @@ document.getElementById('submit-admin-login-btn')?.addEventListener('click', () 
     renderNavigation();
     syncEditorModeAttributes();
     updateBottomSafePadding();
-  } else {
-    document.getElementById('admin-login-error').textContent = 'Username atau password salah!';
+  } catch (err) {
+    if (errEl) errEl.textContent = 'Login ditolak: Email atau password Firebase salah!';
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Masuk Editor'; }
   }
 });
+
 
 document.getElementById('save-admin-avatar-btn')?.addEventListener('click', () => {
   const urlIn = document.getElementById('admin-avatar-url');
@@ -1153,16 +1175,38 @@ contactForm?.addEventListener('submit', (e) => {
 });
 
 // =========================================================
-// REAL-TIME CLOUD SYNC (FIREBASE REALTIME DATABASE)
+// REAL-TIME CLOUD SYNC DENGAN FIREBASE AUTH TOKEN
 // =========================================================
 const FIREBASE_URL_KEY = 'hamz_firebase_db_url';
-// Tempel URL Firebase Realtime Database kamu di dalam tanda kutip di bawah ini
-// agar semua perangkat otomatis terhubung tanpa input ulang:
-const DEFAULT_FIREBASE_URL = 'https://ilham-portofolio-b57dc-default-rtdb.asia-southeast1.firebasedatabase.app/';
+const FIREBASE_TOKEN_KEY = 'hamz_fb_id_token';
+const FIREBASE_REFRESH_KEY = 'hamz_fb_refresh_token';
+
+const DEFAULT_FIREBASE_URL = 'https://ilham-portofolio-b57dc-default-rtdb.asia-southeast1.firebasedatabase.app';
+const FIREBASE_WEB_API_KEY = 'AIzaSyCmlrxwQ1QJHne8dRFHopk2OZUWiPRodQ0';
 
 function getFirebaseBaseUrl() {
   const saved = localStorage.getItem(FIREBASE_URL_KEY) || DEFAULT_FIREBASE_URL;
   return saved.trim().replace(/\/+$/, '');
+}
+
+async function getValidFirebaseToken() {
+  const refreshToken = localStorage.getItem(FIREBASE_REFRESH_KEY);
+  if (!refreshToken) return localStorage.getItem(FIREBASE_TOKEN_KEY) || '';
+
+  try {
+    const res = await fetch(`https://securetoken.googleapis.com/v1/token?key=${FIREBASE_WEB_API_KEY}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: `grant_type=refresh_token&refresh_token=${encodeURIComponent(refreshToken)}`
+    });
+    const data = await res.json();
+    if (res.ok && data.id_token) {
+      localStorage.setItem(FIREBASE_TOKEN_KEY, data.id_token);
+      if (data.refresh_token) localStorage.setItem(FIREBASE_REFRESH_KEY, data.refresh_token);
+      return data.id_token;
+    }
+  } catch {}
+  return localStorage.getItem(FIREBASE_TOKEN_KEY) || '';
 }
 
 function setCloudStatusText(msg, isError = false) {
@@ -1177,20 +1221,26 @@ function pushDataToFirebase() {
   const baseUrl = getFirebaseBaseUrl();
   if (!baseUrl) return;
 
-  setCloudStatusText('☁️ Menyimpan ke Cloud...');
+  setCloudStatusText('☁️ Menyimpan ke Cloud (Terautentikasi)...');
   clearTimeout(cloudSyncTimer);
   cloudSyncTimer = setTimeout(async () => {
     try {
-      const res = await fetch(`${baseUrl}/portfolioData.json`, {
+      const token = await getValidFirebaseToken();
+      if (!token) throw new Error('Sesi habis, silakan login ulang');
+
+      const safePayload = { ...appData };
+      delete safePayload.adminCreds;
+
+      const res = await fetch(`${baseUrl}/portfolioData.json?auth=${encodeURIComponent(token)}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(appData)
+        body: JSON.stringify(safePayload)
       });
       if (!res.ok) throw new Error('HTTP ' + res.status);
       const now = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-      setCloudStatusText(`✅ Tersinkron Real-Time (${now})`);
+      setCloudStatusText(`🔒 Tersinkron Aman (${now})`);
     } catch (err) {
-      setCloudStatusText('⚠️ Gagal sync ke Firebase. Cek URL / Rules.', true);
+      setCloudStatusText('⚠️ Gagal sync: Sesi habis atau UID tidak cocok.', true);
     }
   }, 600);
 }
@@ -1207,20 +1257,19 @@ async function pullDataFromFirebase(showAlert = false) {
       appData = {
         ...appData,
         ...cloudData,
-        adminCreds: { ...appData.adminCreds, ...(cloudData.adminCreds || {}) },
         theme: { ...appData.theme, ...(cloudData.theme || {}) }
       };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
       renderAllUI();
       updateBottomSafePadding();
-      setCloudStatusText('✅ Data terbaru dimuat dari Cloud');
+      setCloudStatusText('🔒 Data terbaru dimuat dari Cloud');
       if (showAlert) alert('Berhasil menarik data terbaru dari Firebase!');
     } else if (showAlert) {
-      alert('Database Firebase masih kosong. Tekan "Hubungkan & Sync" untuk mengunggah data saat ini.');
+      alert('Database Firebase masih kosong. Tekan "Hubungkan & Sync" untuk mengunggah data.');
     }
   } catch (err) {
     setCloudStatusText('⚠️ Gagal memuat data Cloud.', true);
-    if (showAlert) alert('Gagal terhubung ke Firebase. Pastikan URL benar dan Rules mengizinkan baca/tulis.');
+    if (showAlert) alert('Gagal membaca data dari Firebase.');
   }
 }
 
@@ -1234,7 +1283,6 @@ document.getElementById('save-firebase-url-btn')?.addEventListener('click', () =
   }
   localStorage.setItem(FIREBASE_URL_KEY, val);
   pushDataToFirebase();
-  alert('Terhubung! Jangan lupa salin URL ini ke variabel DEFAULT_FIREBASE_URL di cms-events.js agar pengunjung di perangkat lain otomatis terhubung.');
 });
 
 document.getElementById('pull-firebase-btn')?.addEventListener('click', () => {
@@ -1249,7 +1297,6 @@ if (savedRaw) {
     appData = {
       ...appData,
       ...parsed,
-      adminCreds: { ...appData.adminCreds, ...(parsed.adminCreds || {}) },
       theme: { ...appData.theme, ...(parsed.theme || {}) }
     };
   } catch {}
