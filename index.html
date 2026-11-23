@@ -8,105 +8,454 @@
 </head>
 <body>
 
-  <!-- Navigasi -->
-  <header>
+  <!-- Latar Estetika: Custom BG, Cyber Grid & Cahaya Mengambang -->
+  <div id="custom-bg-layer" class="custom-bg-layer"></div>
+  <div class="cyber-grid-bg"></div>
+  <div class="bg-orb orb-1"></div>
+  <div class="bg-orb orb-2"></div>
+
+  <!-- Navigasi Utama -->
+  <header id="main-topbar" data-editable-box="topbar">
     <nav class="navbar">
-      <a href="#" class="logo">HAMZ<span>.DEV</span></a>
+      <div class="nav-brand-wrap">
+        <a href="#beranda" class="logo editable" data-key="logo" data-page-link="beranda">HAMZ<span>.DEV</span></a>
+        <button type="button" id="topbar-add-link-btn" class="btn primary sm editor-only-inline" title="Tambah Link di Top Bar">+ Menu</button>
+      </div>
       <button class="menu-toggle" id="menu-toggle" aria-label="Buka Menu">☰</button>
-      <ul class="nav-links" id="nav-links">
-        <li><a href="#tentang">Tentang</a></li>
-        <li><a href="#keahlian">Keahlian</a></li>
-        <li><a href="#proyek">Proyek</a></li>
-        <li><a href="#kontak">Kontak</a></li>
-      </ul>
+      <ul class="nav-links" id="nav-links"></ul>
     </nav>
+    <div id="page-subnav-bar" class="page-subnav-bar hidden"></div>
+    <div id="scroll-progress-bar" class="scroll-progress-bar"></div>
   </header>
 
-  <!-- Hero Section -->
-  <section class="hero" id="beranda">
-    <div class="hero-content">
-      <p class="tagline">Halo, saya</p>
-      <h1>Ilham Pangestu</h1>
-      <p class="subtitle">Pelajar TJKT &bull; Antusias Hardware PC &bull; IoT &amp; Web Developer</p>
-      <div class="hero-buttons">
-        <a href="#proyek" class="btn primary">Lihat Proyek</a>
-        <a href="#kontak" class="btn secondary">Hubungi Saya</a>
+  <!-- Wadah Halaman Tunggal Aktif -->
+  <main id="pages-host">
+
+    <!-- HALAMAN 1: BERANDA -->
+    <section class="page-view active" id="page-beranda" data-page-id="beranda">
+      <div class="hero" id="sec-hero" data-block-id="sec-hero">
+        <button type="button" class="delete-section-btn" data-remove-target="sec-hero">🗑️ Hapus Blok</button>
+        <div class="hero-content">
+          <p class="tagline editable" data-key="hero-tagline">Halo, saya</p>
+          <h1 class="editable" data-key="hero-title">Ilham Pangestu</h1>
+          <p class="subtitle editable" data-key="hero-sub">Pelajar TJKT &bull; Antusias Hardware PC &bull; IoT &amp; Web Developer</p>
+          <div class="hero-buttons">
+            <button type="button" class="btn primary" data-page-link="proyek">Lihat Proyek &amp; Tugas</button>
+            <button type="button" class="btn secondary" data-page-link="kontak">Hubungi Saya</button>
+          </div>
+        </div>
+
+        <div class="floating-cards" id="sec-stats" data-block-id="sec-stats">
+          <button type="button" class="delete-section-btn" data-remove-target="sec-stats">🗑️ Hapus</button>
+          <div class="float-card float-anim-1" id="stat-card-1">
+            <span class="float-icon">⚡</span>
+            <div>
+              <strong class="editable" data-key="stat1-t">Hardware &amp; PC</strong>
+              <p class="editable" data-key="stat1-d">Custom Build &amp; Troubleshooting</p>
+            </div>
+          </div>
+          <div class="float-card float-anim-2" id="stat-card-2">
+            <span class="float-icon">🔌</span>
+            <div>
+              <strong class="editable" data-key="stat2-t">ESP32 &amp; IoT</strong>
+              <p class="editable" data-key="stat2-d">Simulasi &amp; Otomasi Sirkuit</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="page-dynamic-area" data-page-area="beranda"></div>
+    </section>
+
+    <!-- HALAMAN 2: TENTANG & KEAHLIAN -->
+    <section class="page-view" id="page-tentang" data-page-id="tentang">
+      <div class="sub-block" id="sub-profil" data-block-id="sub-profil">
+        <button type="button" class="delete-section-btn" data-remove-target="sub-profil">🗑️ Hapus Bagian</button>
+        <h2 class="section-title editable" data-key="about-title">Profil Singkat</h2>
+        <div class="glass-card float-hover" id="card-about-main">
+          <p class="editable" data-key="about-body">
+            Saya adalah pelajar Teknik Jaringan Komputer dan Telekomunikasi (TJKT) yang memiliki minat tinggi pada perakitan hardware PC, pemrograman mikrokontroler (ESP32), jaringan komputer, serta pengembangan web front-end.
+          </p>
+        </div>
+      </div>
+
+      <div class="sub-block" id="sub-keahlian" data-block-id="sub-keahlian">
+        <button type="button" class="delete-section-btn" data-remove-target="sub-keahlian">🗑️ Hapus Bagian</button>
+        <h2 class="section-title editable" data-key="skill-title">Bidang Keahlian</h2>
+        <div class="grid-cards">
+          <div class="glass-card float-hover" id="card-sk1" data-block-id="card-sk1">
+            <button type="button" class="delete-section-btn" data-remove-target="card-sk1">×</button>
+            <h3 class="editable" data-key="sk1-t">Perakitan &amp; Hardware PC</h3>
+            <p class="editable" data-key="sk1-d">Kompatibilitas komponen, manajemen kabel, dan troubleshooting sistem.</p>
+          </div>
+          <div class="glass-card float-hover" id="card-sk2" data-block-id="card-sk2">
+            <button type="button" class="delete-section-btn" data-remove-target="card-sk2">×</button>
+            <h3 class="editable" data-key="sk2-t">Jaringan Komputer</h3>
+            <p class="editable" data-key="sk2-d">Konfigurasi dasar jaringan, crimping kabel, dan topologi LAN.</p>
+          </div>
+          <div class="glass-card float-hover" id="card-sk3" data-block-id="card-sk3">
+            <button type="button" class="delete-section-btn" data-remove-target="card-sk3">×</button>
+            <h3 class="editable" data-key="sk3-t">IoT &amp; Mikrokontroler</h3>
+            <p class="editable" data-key="sk3-d">Perancangan sirkuit dan pemrograman dasar berbasis ESP32.</p>
+          </div>
+          <div class="glass-card float-hover" id="card-sk4" data-block-id="card-sk4">
+            <button type="button" class="delete-section-btn" data-remove-target="card-sk4">×</button>
+            <h3 class="editable" data-key="sk4-t">Web Development</h3>
+            <p class="editable" data-key="sk4-d">Membangun antarmuka web responsif menggunakan HTML, CSS, dan JavaScript.</p>
+          </div>
+        </div>
+      </div>
+      <div class="page-dynamic-area" data-page-area="tentang"></div>
+    </section>
+
+    <!-- HALAMAN 3: PROYEK & TUGAS -->
+    <section class="page-view" id="page-proyek" data-page-id="proyek">
+      <div class="sub-block" id="sub-proyek-utama" data-block-id="sub-proyek-utama">
+        <button type="button" class="delete-section-btn" data-remove-target="sub-proyek-utama">🗑️ Hapus Bagian</button>
+        <div class="section-top-bar">
+          <h2 class="section-title editable" data-key="proj-title">Proyek &amp; Tugas Pilihan</h2>
+          <button type="button" class="btn primary sm editor-only-inline" id="quick-add-media-card-btn">+ Tambah Kartu Teks / Media</button>
+        </div>
+        <div class="grid-cards" id="media-cards-proyek"></div>
+      </div>
+
+      <div class="sub-block" id="sub-tugas-praktikum" data-block-id="sub-tugas-praktikum">
+        <button type="button" class="delete-section-btn" data-remove-target="sub-tugas-praktikum">🗑️ Hapus Bagian</button>
+        <h2 class="section-title editable" data-key="task-title">Arsip Tugas &amp; Praktikum</h2>
+        <div class="grid-cards" id="media-cards-tugas"></div>
+      </div>
+      <div class="page-dynamic-area" data-page-area="proyek"></div>
+    </section>
+
+    <!-- HALAMAN 4: KONTAK -->
+    <section class="page-view" id="page-kontak" data-page-id="kontak">
+      <div class="sub-block" id="sub-kontak-form" data-block-id="sub-kontak-form">
+        <button type="button" class="delete-section-btn" data-remove-target="sub-kontak-form">🗑️ Hapus Bagian</button>
+        <h2 class="section-title editable" data-key="con-title">Hubungi Saya</h2>
+        <form class="contact-form glass-card" id="contact-form">
+          <input type="text" id="nama" placeholder="Nama Anda" required>
+          <input type="email" id="email" placeholder="Email Anda" required>
+          <textarea id="pesan" rows="4" placeholder="Tulis pesan Anda..." required></textarea>
+          <button type="submit" class="btn primary">Kirim Pesan</button>
+          <p id="form-status" class="form-status"></p>
+        </form>
+      </div>
+      <div class="page-dynamic-area" data-page-area="kontak"></div>
+    </section>
+
+  </main>
+
+    <!-- MODAL LOGIN ADMIN -->
+  <div id="admin-login-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true">
+    <div class="modal-box glass-card">
+      <div class="modal-top">
+        <h3>🔐 Login Admin Studio</h3>
+        <button type="button" id="close-admin-login" class="modal-x">&times;</button>
+      </div>
+      <p class="editor-tip" style="margin-bottom:0.2rem;">Masukkan kredensial admin untuk membuka mode editor.</p>
+      <label class="field-lbl">Username</label>
+      <input type="text" id="admin-user-input" placeholder="admin" autocomplete="username">
+      <label class="field-lbl">Password</label>
+      <input type="password" id="admin-pass-input" placeholder="••••••••" autocomplete="current-password">
+      <p id="admin-login-error" class="form-status" style="color:#ef4444;"></p>
+      <div class="btn-grid" style="margin-top:0.5rem;">
+        <button type="button" id="submit-admin-login-btn" class="btn primary">Masuk Editor</button>
+        <button type="button" id="cancel-admin-login-btn" class="btn secondary">Batal</button>
       </div>
     </div>
-  </section>
+  </div>
 
-  <!-- Tentang Saya -->
-  <section class="section" id="tentang">
-    <h2 class="section-title">Tentang Saya</h2>
-    <div class="about-box">
-      <p>
-        Saya adalah pelajar Teknik Jaringan Komputer dan Telekomunikasi (TJKT) yang memiliki minat tinggi pada perakitan hardware PC, pemrograman mikrokontroler (ESP32), jaringan komputer, serta pengembangan web front-end.
-      </p>
+  <!-- DOCK SAAT MODE PRATINJAU PENGUNJUNG (KETIKA ADMIN SUDAH LOGIN) -->
+  <div class="editor-floating-dock hidden" id="admin-preview-dock">
+    <button type="button" id="resume-edit-btn" class="editor-fab">✏️ Kembali Edit</button>
+    <button type="button" id="preview-logout-btn" class="dock-btn">🚪 Logout</button>
+  </div>
+
+  <!-- TOMBOL MELAYANG EDITOR (HANYA MUNCUL SETELAH LOGIN ADMIN) -->
+  <div class="editor-floating-dock hidden" id="editor-dock">
+    <button type="button" id="undo-btn" class="dock-btn" title="Undo Perubahan">↩️</button>
+    <button type="button" id="redo-btn" class="dock-btn" title="Redo Perubahan">↪️</button>
+    <button type="button" id="preview-mode-btn" class="dock-btn" title="Keluar ke Mode Pratinjau Pengunjung">👁️ Pratinjau</button>
+    <button type="button" id="toggle-editor-btn" class="editor-fab">🛠️ Panel</button>
+  </div>
+
+  <!-- PANEL STUDIO EDITOR -->
+  <aside id="editor-panel" class="editor-panel hidden">
+    <div class="editor-header">
+      <h3>🛠️ Studio Editor</h3>
+      <button type="button" id="close-editor-btn" aria-label="Tutup Panel">&times;</button>
     </div>
-  </section>
 
-  <!-- Keahlian -->
-  <section class="section" id="keahlian">
-    <h2 class="section-title">Keahlian</h2>
-    <div class="skills-grid">
-      <div class="skill-card">
-        <h3>Perakitan &amp; Hardware PC</h3>
-        <p>Kompatibilitas komponen, manajemen kabel, dan troubleshooting sistem.</p>
+    <div class="editor-tabs">
+      <button type="button" class="ed-tab active" data-tab="tab-halaman">📝 Konten</button>
+      <button type="button" class="ed-tab" data-tab="tab-media">🖼️ Kartu</button>
+      <button type="button" class="ed-tab" data-tab="tab-tema">🎨 Estetika</button>
+      <button type="button" class="ed-tab" data-tab="tab-export">🔐 Admin</button>
+    </div>
+
+    <!-- TAB 1: TAMBAH TEKS, OVERLAY TEKS, HALAMAN & WARNA TEKS -->
+    <div class="ed-tab-content active" id="tab-halaman">
+      <div class="highlight-color-bar">
+        <span>🖍️ Warna Teks Pilihan:</span>
+        <div class="hl-actions">
+          <input type="color" id="selection-text-color" value="#00e5ff" title="Pilih Warna Teks">
+          <button type="button" id="apply-selection-color-btn" class="btn primary sm">Terapkan</button>
+        </div>
       </div>
-      <div class="skill-card">
-        <h3>Jaringan Komputer</h3>
-        <p>Konfigurasi dasar jaringan, crimping kabel, dan topologi LAN.</p>
+
+      <div class="editor-group">
+        <label>📝 Tambahkan Blok Teks ke Halaman Aktif</label>
+        <input type="text" id="new-text-heading" placeholder="Judul Teks (opsional)">
+        <textarea id="new-text-body" rows="3" placeholder="Tulis paragraf atau catatan panjang di sini..."></textarea>
+        <label class="check-row">
+          <input type="checkbox" id="new-text-overlay" checked>
+          <span>Gunakan Card Overlay / Latar Kaca di Belakang Teks</span>
+        </label>
+        <button type="button" id="add-text-block-btn" class="btn primary full">+ Tambahkan Teks</button>
       </div>
-      <div class="skill-card">
-        <h3>IoT &amp; Mikrokontroler</h3>
-        <p>Perancangan sirkuit dan pemrograman dasar berbasis ESP32.</p>
-      </div>
-      <div class="skill-card">
-        <h3>Web Development</h3>
-        <p>Membangun antarmuka web responsif menggunakan HTML, CSS, dan JavaScript.</p>
+
+      <hr class="ed-divider">
+
+      <div class="editor-group">
+        <label>➕ Buat Halaman Baru (Main Content)</label>
+        <input type="text" id="new-page-title" placeholder="Judul Halaman (misal: Sertifikat)">
+        <textarea id="new-page-intro" rows="2" placeholder="Deskripsi pembuka halaman..."></textarea>
+        <button type="button" id="create-page-btn" class="btn secondary full">Buat Halaman Baru</button>
       </div>
     </div>
-  </section>
 
-  <!-- Proyek -->
-  <section class="section" id="proyek">
-    <h2 class="section-title">Proyek Pilihan</h2>
-    <div class="projects-grid">
-      <article class="project-card">
-        <span class="badge">IoT / ESP32</span>
-        <h3>Kontrol Suhu Otomatis</h3>
-        <p>Simulasi sistem pengendali suhu ruangan penetas berbasis ESP32 dengan monitoring jarak jauh.</p>
-      </article>
-      <article class="project-card">
-        <span class="badge">Hardware</span>
-        <h3>Simulasi Rakit PC Custom</h3>
-        <p>Perancangan berbagai konfigurasi PC sesuai kebutuhan (Office, Gaming, Desain) beserta estimasi daya.</p>
-      </article>
-      <article class="project-card">
-        <span class="badge">Web</span>
-        <h3>Website Portofolio Pribadi</h3>
-        <p>Website statis ringan dengan desain dark-mode responsif yang di-hosting melalui GitHub Pages.</p>
-      </article>
+    <!-- TAB 2: KARTU TEKS & KARTU MEDIA -->
+    <div class="ed-tab-content" id="tab-media">
+      <p class="editor-tip">Pilih jenis <strong>Kartu Teks</strong> (Editorial, Kutipan, Pengumuman, Terminal) atau <strong>Kartu Media</strong> (Bento Wide, Full-Bleed, Horizontal Split).</p>
+      <button type="button" id="open-media-studio-btn" class="btn primary full">✨ Buat Kartu Teks / Media</button>
+      <hr class="ed-divider">
+      <p class="editor-tip">💡 Klik area pinggir kartu/blok untuk membuka <strong>Properti Elemen</strong> (Ukuran, Transparansi, Overlay Teks &amp; Bingkai Foto).</p>
     </div>
-  </section>
 
-  <!-- Kontak -->
-  <section class="section" id="kontak">
-    <h2 class="section-title">Kontak</h2>
-    <form class="contact-form" id="contact-form">
-      <input type="text" id="nama" placeholder="Nama Anda" required>
-      <input type="email" id="email" placeholder="Email Anda" required>
-      <textarea id="pesan" rows="4" placeholder="Tulis pesan Anda..." required></textarea>
-      <button type="submit" class="btn primary">Kirim Pesan</button>
-      <p id="form-status" class="form-status"></p>
-    </form>
-  </section>
+    <!-- TAB 3: ESTETIKA (TEMA, BACKGROUND JERNIH, TIPOGRAFI & SUDUT) -->
+    <div class="ed-tab-content" id="tab-tema">
+      <div class="preset-grid">
+        <button type="button" class="preset-btn" data-preset="cyber"><span class="swatch" style="background:#00e5ff;"></span> Cyber</button>
+        <button type="button" class="preset-btn" data-preset="matrix"><span class="swatch" style="background:#10b981;"></span> Matrix</button>
+        <button type="button" class="preset-btn" data-preset="sunset"><span class="swatch" style="background:#f59e0b;"></span> Sunset</button>
+        <button type="button" class="preset-btn" data-preset="light"><span class="swatch" style="background:#2563eb;"></span> Light</button>
+      </div>
 
-  <!-- Footer -->
+      <div class="color-grid" style="margin-top:0.65rem;">
+        <label class="color-item"><span>Aksen</span><input type="color" id="pick-accent" value="#00e5ff"></label>
+        <label class="color-item"><span>Latar</span><input type="color" id="pick-bg" value="#080c14"></label>
+        <label class="color-item"><span>Kartu</span><input type="color" id="pick-card" value="#131a28"></label>
+        <label class="color-item"><span>Teks</span><input type="color" id="pick-text" value="#f1f5f9"></label>
+      </div>
+
+      <div class="editor-group" style="margin-top:0.75rem;">
+        <label>🖼️ Gambar Background (Otomatis Hilangkan Grid)</label>
+        <input type="text" id="bg-image-url" placeholder="Tempel URL Gambar Background...">
+        <input type="file" id="bg-image-file" accept="image/*">
+        <div class="btn-grid">
+          <button type="button" id="apply-bg-btn" class="btn primary sm">Pasang BG</button>
+          <button type="button" id="clear-bg-btn" class="btn secondary sm">Hapus BG</button>
+        </div>
+
+        <label>☀️ Kecerahan Gambar BG (<span id="bg-op-lbl">90%</span>)</label>
+        <input type="range" id="bg-opacity-range" min="15" max="100" value="90">
+
+        <label>💧 Blur Gambar BG (<span id="bg-blur-lbl">0px</span>)</label>
+        <input type="range" id="bg-blur-range" min="0" max="14" value="0">
+
+        <hr class="ed-divider">
+
+        <label>🔤 Gaya Tipografi</label>
+        <select id="font-style-select">
+          <option value="sans">Modern Clean Sans</option>
+          <option value="mono">Tech Developer Mono</option>
+          <option value="editorial">Classic Editorial Serif</option>
+        </select>
+
+        <label>📐 Sudut Kartu (<span id="radius-val-lbl">14px</span>)</label>
+        <input type="range" id="card-radius-range" min="0" max="28" value="14">
+
+        <label class="check-row">
+          <input type="checkbox" id="toggle-grid-bg" checked>
+          <span>Tampilkan Pola Cyber Grid (Saat Tanpa Gambar BG)</span>
+        </label>
+      </div>
+    </div>
+
+    <!-- TAB 4: KEAMANAN ADMIN, AVATAR LOGIN & DEPLOY -->
+    <div class="ed-tab-content" id="tab-export">
+      <div class="editor-group">
+        <label>🖼️ Foto Avatar Tombol Login di Top Bar</label>
+        <input type="text" id="admin-avatar-url" placeholder="Tempel URL foto profil...">
+        <input type="file" id="admin-avatar-file" accept="image/*">
+        <div class="btn-grid">
+          <button type="button" id="save-admin-avatar-btn" class="btn primary sm">Simpan Avatar</button>
+          <button type="button" id="reset-admin-avatar-btn" class="btn secondary sm">Reset Ikon</button>
+        </div>
+      </div>
+
+      <hr class="ed-divider">
+
+      <div class="editor-group">
+        <label>🔑 Ubah Password Admin</label>
+        <input type="password" id="new-admin-pass" placeholder="Password admin baru...">
+        <button type="button" id="save-admin-pass-btn" class="btn secondary sm full">Simpan Password Baru</button>
+        <button type="button" id="logout-admin-btn" class="btn danger sm full">🚪 Logout Admin (Kembali ke Pengunjung)</button>
+      </div>
+
+      <hr class="ed-divider">
+
+      <div class="editor-group">
+        <label>🌐 Generator HTML Siap Deploy (GitHub Pages)</label>
+        <button type="button" id="export-html-btn" class="btn primary full">⬇️ Download File HTML Final</button>
+        <div class="btn-grid" style="margin-top:0.35rem;">
+          <button type="button" id="export-data-btn" class="btn secondary sm">Export JSON</button>
+          <button type="button" id="import-data-btn" class="btn secondary sm">Import JSON</button>
+          <input type="file" id="import-file-input" accept=".json" class="hidden">
+        </div>
+        <button type="button" id="reset-data-btn" class="btn danger sm full" style="margin-top:0.35rem;">🗑️ Reset Semua ke Awal</button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- INSPEKTOR ELEMEN (OTOMATIS HILANG SAAT MENGETIK TEKS) -->
+  <div id="element-inspector" class="element-inspector hidden">
+    <div class="insp-top">
+      <strong id="insp-target-name">🎛️ Properti Elemen</strong>
+      <button type="button" id="close-inspector-btn">&times;</button>
+    </div>
+    <div class="insp-grid">
+      <label>↔️ Lebar Elemen (<span id="insp-width-lbl">100%</span>)
+        <input type="range" id="insp-width-range" min="45" max="100" value="100">
+      </label>
+      <label>👻 Transparansi (<span id="insp-opacity-lbl">100%</span>)
+        <input type="range" id="insp-opacity-range" min="15" max="100" value="100">
+      </label>
+    </div>
+    <div class="insp-actions">
+      <button type="button" id="toggle-el-overlay-btn" class="btn secondary sm">🪟 Toggle Overlay Kartu</button>
+      <button type="button" id="open-frame-modal-btn" class="btn primary sm">🖼️ Bingkai Foto</button>
+      <button type="button" id="reset-el-style-btn" class="btn secondary sm">Reset</button>
+    </div>
+  </div>
+
+  <!-- MODAL PILIHAN BINGKAI FOTO (5 BENTUK) -->
+  <div id="photo-frame-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true">
+    <div class="modal-box glass-card">
+      <div class="modal-top">
+        <h3>🖼️ Tambah Bingkai Foto</h3>
+        <button type="button" id="close-frame-modal" class="modal-x">&times;</button>
+      </div>
+
+      <label class="field-lbl">Pilih Bentuk Bingkai</label>
+      <select id="pf-shape">
+        <option value="circle">1. Lingkaran (Circle Avatar)</option>
+        <option value="hexagon">2. Hexagon Cyber (Segi Enam)</option>
+        <option value="polaroid">3. Polaroid Klasik + Caption</option>
+        <option value="neon">4. Neon Cyber Border</option>
+        <option value="cut">5. Sudut Terpotong (Tech Cut)</option>
+      </select>
+
+      <label class="field-lbl">Pilih Foto (URL atau Upload dari Galeri)</label>
+      <input type="text" id="pf-img-url" placeholder="https://... (URL gambar)">
+      <input type="file" id="pf-img-file" accept="image/*">
+
+      <label class="field-lbl">Ukuran Bingkai (<span id="pf-size-lbl">170px</span>)</label>
+      <input type="range" id="pf-size-range" min="90" max="340" value="170">
+
+      <input type="text" id="pf-caption" placeholder="Keterangan foto (opsional, tampil di Polaroid)">
+
+      <div class="btn-grid" style="margin-top:0.65rem;">
+        <button type="button" id="save-frame-btn" class="btn primary">Pasang Bingkai</button>
+        <button type="button" id="remove-frame-btn" class="btn danger">Hapus Bingkai</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- POP-UP TERSENDIRI: EDITOR TEMPLATE KARTU TEKS & KARTU MEDIA -->
+  <div id="media-card-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true">
+    <div class="modal-box glass-card">
+      <div class="modal-top">
+        <h3 id="media-modal-heading">🖼️ Template Kartu Teks &amp; Media</h3>
+        <button type="button" id="close-media-modal" class="modal-x">&times;</button>
+      </div>
+
+      <label class="field-lbl">Jenis Kartu</label>
+      <select id="mc-kind">
+        <option value="media">🖼️ Kartu Media (Proyek / Foto / Video / File)</option>
+        <option value="text">📝 Kartu Teks (Artikel / Pengumuman / Kutipan / Catatan)</option>
+      </select>
+
+      <label class="field-lbl">Pilih Template Kartu</label>
+      <select id="mc-template">
+        <optgroup label="Template Kartu Media">
+          <option value="bento">1. Bento Wide (Kartu Sorotan Melebar)</option>
+          <option value="fullbleed">2. Full-Bleed Cover (Media Penuh di Atas)</option>
+          <option value="horizontal">3. Horizontal Split (Samping-Menyamping)</option>
+          <option value="terminal">4. Terminal Log (Gaya Tugas &amp; Laporan)</option>
+        </optgroup>
+        <optgroup label="Template Kartu Teks">
+          <option value="editorial">5. Editorial Artikel (Judul Besar &amp; Paragraf Rapi)</option>
+          <option value="quote">6. Kartu Kutipan / Highlight (Aksen Garis &amp; Ikon)</option>
+          <option value="announcement">7. Kartu Pengumuman / Info Penting (Badge &amp; Border)</option>
+        </optgroup>
+      </select>
+
+      <label class="field-lbl">Halaman / Kelompok Tujuan</label>
+      <select id="mc-target-group">
+        <option value="proyek">Proyek &amp; Tugas Pilihan</option>
+        <option value="tugas">Arsip Tugas &amp; Praktikum</option>
+        <option value="active-page">Halaman yang Sedang Dibuka</option>
+      </select>
+
+      <input type="text" id="mc-badge" placeholder="Label / Tag (pisahkan dengan koma, misal: ESP32, IoT)">
+      <input type="text" id="mc-title" placeholder="Judul Kartu / Nama Tugas" required>
+      <textarea id="mc-desc" rows="3" placeholder="Tulis deskripsi tugas, isi artikel, atau catatan..."></textarea>
+
+      <label class="field-lbl">Media Utama (Opsional)</label>
+      <select id="mc-media-type">
+        <option value="none">Tanpa Media Visual</option>
+        <option value="image">Gambar / Screenshot Hasil</option>
+        <option value="video">Video Demo (YouTube URL / MP4)</option>
+        <option value="file">File Tugas / Laporan (PDF, DOCX, ZIP)</option>
+      </select>
+
+      <div id="mc-media-inputs" class="hidden">
+        <input type="text" id="mc-media-url" placeholder="Tempel URL media atau pilih file di bawah">
+        <input type="file" id="mc-media-file">
+      </div>
+
+      <label class="field-lbl">Tautan Pendukung (Opsional)</label>
+      <div class="input-row">
+        <input type="text" id="mc-link-url" placeholder="https://github.com/...">
+        <input type="text" id="mc-link-label" placeholder="Teks Tombol (misal: Buka Tugas)">
+      </div>
+
+      <div class="btn-grid" style="margin-top:0.85rem;">
+        <button type="button" id="save-media-card-btn" class="btn primary">💾 Simpan Kartu</button>
+        <button type="button" id="cancel-media-card-btn" class="btn secondary">Batal</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- LIGHTBOX PRATINJAU GAMBAR & PDF -->
+  <div id="lightbox-modal" class="lightbox-backdrop hidden" role="dialog" aria-modal="true">
+    <button type="button" id="lightbox-close" class="lightbox-close" aria-label="Tutup">&times;</button>
+    <div class="lightbox-inner">
+      <div id="lightbox-stage" class="lightbox-stage"></div>
+      <div class="lightbox-footer">
+        <span id="lightbox-caption"></span>
+        <a id="lightbox-download" href="#" download class="btn primary sm">⬇️ Unduh</a>
+      </div>
+    </div>
+  </div>
+
   <footer>
-    <p>&copy; 2026 Ilham Pangestu (@hamztechlab). Dibuat dengan HTML, CSS, &amp; JS.</p>
+    <p class="editable" data-key="footer-text">&copy; 2026 Ilham Pangestu (@hamztechlab). Dibuat dengan HTML, CSS, &amp; JS.</p>
   </footer>
 
-  <script src="script.js"></script>
+  <script src="cms-core.js"></script>
+  <script src="cms-render.js"></script>
+  <script src="cms-events.js"></script>
 </body>
 </html>
+
